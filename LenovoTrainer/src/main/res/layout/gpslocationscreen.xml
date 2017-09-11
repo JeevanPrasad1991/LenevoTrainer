@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/colorAccent" >
+
+    <android.support.design.widget.AppBarLayout
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:theme="@style/AppTheme.NoActionBar.AppBarOverlay">
+        <android.support.v7.widget.Toolbar
+            android:id="@+id/toolbar"
+            android:layout_width="match_parent"
+            android:layout_height="?attr/actionBarSize"
+            android:background="?attr/colorPrimary"
+            app:popupTheme="@style/AppTheme.NoActionBar.PopupOverlay" />
+
+    </android.support.design.widget.AppBarLayout>
+    <RelativeLayout android:id="@+id/ghg"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        >
+        <RelativeLayout android:id="@+id/maplayout"
+            android:layout_width="fill_parent"
+            android:layout_height="55dp"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentLeft="true"
+            android:background="?attr/colorPrimary"
+            >
+
+            <Button
+                android:id="@+id/StoreFront"
+                android:layout_width="70dp"
+                android:layout_height="70dp"
+                android:layout_marginLeft="8dp"
+                android:background="@drawable/camera_icon"
+                android:layout_below="@+id/textView2"
+                />
+
+            <TextView
+                android:id="@+id/textView3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:layout_marginLeft="30dp"
+                android:visibility="gone"
+                android:textSize="12sp"
+                android:layout_toRightOf="@+id/textView2"
+                android:textColor="#000000"
+                android:text="Inside"
+                />
+
+            <Button
+                android:id="@+id/captureimageinside"
+                android:layout_below="@id/textView3"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@id/StoreFront"
+                android:layout_marginLeft="15dp"
+                android:visibility="gone"
+
+                />
+
+            <TextView
+                android:id="@+id/textView4"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="30dp"
+                android:layout_marginLeft="40dp"
+                android:layout_toRightOf="@+id/textView3"
+                android:textColor="#000000"
+                android:text="Inside"
+                android:textSize="12sp"
+                android:visibility="gone"
+                />
+
+            <Button
+                android:id="@+id/captureimageinside2"
+                android:layout_below="@id/textView4"
+                android:layout_toRightOf="@id/captureimageinside"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginLeft="10dp"
+                android:visibility="gone"
+                />
+
+            <Button
+                android:id="@+id/savedetails"
+                android:layout_width="100dp"
+                android:layout_height="45dp"
+                android:text="Save"
+                android:paddingLeft="10dp"
+                android:textSize="18sp"
+                android:layout_below="@+id/textView3"
+                android:layout_marginTop="10dp"
+                android:layout_marginRight="5dp"
+                android:layout_marginBottom="3dp"
+                android:layout_alignParentRight="true"
+                android:layout_alignParentEnd="true" />
+
+        </RelativeLayout>
+
+
+
+        <RelativeLayout
+            android:id="@+id/relativeLayout1"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_above="@id/maplayout"
+            android:background="@drawable/map_bg"
+            >
+            <fragment
+                android:id="@+id/mapview"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                class="com.google.android.gms.maps.SupportMapFragment" />
+            <ProgressBar
+                android:id="@+id/progressBar1"
+                style="?android:attr/progressBarStyleLarge"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerHorizontal="true"
+                android:layout_centerVertical="true"
+                android:visibility="gone" />
+
+        </RelativeLayout>
+    </RelativeLayout>
+</LinearLayout>
+

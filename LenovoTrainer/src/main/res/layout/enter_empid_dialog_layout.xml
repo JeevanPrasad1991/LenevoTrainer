@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:padding="30dp"
+    >
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <android.support.design.widget.TextInputLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingLeft="5dp"
+            android:paddingRight="5dp">
+
+            <EditText
+                android:id="@+id/et_empid"
+                android:layout_marginTop="10dp"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:ems="10"
+                android:hint="Employee ID"
+                android:layout_centerInParent="true"
+                android:imeActionId="@+id/login"
+                android:imeActionLabel="@string/action_sign_in_short"
+                android:imeOptions="actionUnspecified"
+                android:inputType="text"
+                android:maxLines="1"
+                android:singleLine="true"
+                />
+
+            </android.support.design.widget.TextInputLayout>
+
+
+    </RelativeLayout>
+
+
+
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content">
+
+        <Button
+            android:id="@+id/btn_get_isd"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Get ISD"
+            android:layout_centerInParent="true"
+            android:background="@color/colorPrimary"
+            android:textColor="@color/white"
+            android:layout_marginTop="10dp"
+            android:layout_marginBottom="10dp"/>
+    </RelativeLayout>
+
+
+</LinearLayout>

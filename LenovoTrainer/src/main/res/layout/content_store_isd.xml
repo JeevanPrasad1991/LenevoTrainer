@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/grey_background"
+    android:paddingBottom="@dimen/custom_margin"
+    android:paddingLeft="@dimen/custom_margin"
+    android:paddingRight="@dimen/custom_margin"
+    android:paddingTop="@dimen/custom_margin"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context="cpm.com.lenovotraining.dailyentry.StoreIsdActivity"
+    tools:showIn="@layout/activity_store_isd"
+    xmlns:fab="http://schemas.android.com/apk/res-auto">
+
+    <android.support.v7.widget.CardView xmlns:card_view="http://schemas.android.com/apk/res-auto"
+        android:id="@+id/card_view_isd"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        card_view:cardUseCompatPadding="true"
+        card_view:cardBackgroundColor="@color/white"
+        card_view:cardCornerRadius="5dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:orientation="vertical">
+
+            <RelativeLayout
+                android:id="@+id/layout_isd_spin"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="5dp"
+                android:layout_marginLeft="10dp"
+                android:layout_marginRight="10dp"
+                android:layout_marginTop="20dp"
+                android:background="@color/colorPrimary"
+
+                >
+
+                <Spinner
+                    android:id="@+id/spinisd"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+
+                    />
+
+            </RelativeLayout>
+
+           <RelativeLayout
+               android:id="@+id/layout_camera"
+               android:layout_width="match_parent"
+               android:layout_height="wrap_content"
+               android:layout_marginTop="10dp"
+               android:orientation="horizontal">
+
+               <TextView
+                   android:layout_width="wrap_content"
+                   android:layout_height="wrap_content"
+                   android:text="Image"
+                   android:layout_marginTop="20dp"
+                   android:layout_marginLeft="10dp"
+                   android:padding="10dp"
+
+                   android:textColor="@color/colorPrimary"
+                   android:textSize="18dp"/>
+               <ImageView
+                   android:id="@+id/isd_image"
+                   android:layout_width="60dp"
+                   android:layout_height="60dp"
+                   android:layout_marginTop="10dp"
+                   android:layout_alignParentRight="true"
+                   android:layout_marginRight="3dp"
+                   android:background="@drawable/camera_icon"
+                   />
+           </RelativeLayout>
+
+            <RelativeLayout
+                android:id="@+id/layout_next"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="20dp"
+                android:layout_marginTop="20dp">
+
+                <Button
+                    android:id="@+id/btn_next"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentLeft="true"
+                    android:layout_marginLeft="10dp"
+                    android:paddingBottom="5dp"
+                    android:paddingLeft="20dp"
+                    android:paddingRight="20dp"
+                    android:paddingTop="5dp"
+                    android:text="Next"
+                    android:background="@color/colorPrimary"
+                    android:textColor="@color/white" />
+
+            </RelativeLayout>
+
+
+            <LinearLayout
+                android:id="@+id/layout_show_isd"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_marginBottom="20dp"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tv_isd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="20dp"
+                    android:text="ISD"
+                    android:textSize="@dimen/text_size_normal" />
+
+                <TextView
+                    android:id="@+id/tv_emp_cd"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="10dp"
+                    android:text="ISD"
+                    android:textSize="@dimen/text_size_normal" />
+
+                <LinearLayout
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="20dp"
+                    android:orientation="horizontal">
+
+                    <Button
+                        android:id="@+id/btn_add_isd"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:background="@color/colorPrimary"
+                        android:text="Add ISD"
+                        android:textColor="@color/white" />
+
+                    <Button
+                        android:id="@+id/btn_cancel"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginLeft="20dp"
+                        android:background="@color/colorPrimary"
+                        android:text="Cancel"
+                        android:textColor="@color/white" />
+
+                </LinearLayout>
+
+            </LinearLayout>
+
+
+        </LinearLayout>
+
+    </android.support.v7.widget.CardView>
+
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/rec_isd_added"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/card_view_isd">
+    </android.support.v7.widget.RecyclerView>
+
+
+
+</RelativeLayout>

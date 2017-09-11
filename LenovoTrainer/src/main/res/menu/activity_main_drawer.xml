@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <group android:checkableBehavior="single">
+        <item
+            android:id="@+id/nav_daily_entry"
+            android:icon="@drawable/ic_menu_send"
+            android:title="Daily Entry" />
+        <item
+            android:id="@+id/nav_download"
+            android:icon="@drawable/ic_menu_camera"
+            android:title="Download" />
+        <item
+            android:id="@+id/nav_upload"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="Upload" />
+        <item
+            android:id="@+id/nav_exit"
+            android:icon="@drawable/ic_menu_manage"
+            android:title="Exit" />
+
+        <item
+            android:id="@+id/nav_export_database"
+            android:icon="@drawable/ic_menu_send"
+            android:title="Export Database" />
+    </group>
+
+    <item android:title="Communicate">
+        <menu>
+            <item
+                android:id="@+id/nav_help"
+                android:icon="@drawable/ic_menu_send"
+                android:title="Help" />
+        </menu>
+    </item>
+
+</menu>

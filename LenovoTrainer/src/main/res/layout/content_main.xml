@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingBottom="5dp"
+    android:paddingLeft="5dp"
+    android:paddingRight="5dp"
+    android:paddingTop="5dp"
+    app:layout_behavior="@string/appbar_scrolling_view_behavior"
+    tools:context=".lenovotrainer.MainActivity"
+    tools:showIn="@layout/app_bar_main"
+    android:background="@color/grey_background">
+
+    <android.support.v7.widget.RecyclerView
+        android:id="@+id/rec_store_data"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:visibility="gone">
+
+    </android.support.v7.widget.RecyclerView>
+
+    <ImageView
+        android:id="@+id/img_logo"
+        android:layout_width="300dp"
+        android:layout_height="204dp"
+
+        android:background="@drawable/logo_lenovo"
+        android:layout_centerInParent="true"/>
+
+</RelativeLayout>

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    android:background="#ffffff"
+
+    >
+    <ImageView android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginRight="3dp"
+        android:layout_marginLeft="3dp"
+        android:layout_marginTop="5dp"
+        android:layout_alignParentTop="true"
+        android:visibility="invisible"
+        />
+    <RelativeLayout android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_centerHorizontal="true"
+        android:layout_centerVertical="true">
+        <ProgressBar android:id="@+id/progress_bar"
+            style="?android:attr/progressBarStyleLarge"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:visible="false"
+            android:layout_centerHorizontal="true"/>
+        <TextView android:text="Uploading Data"
+            android:id="@+id/licencelabel1"
+            android:layout_below="@id/progress_bar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerHorizontal="true"
+            android:textColor="#000000" android:textSize="15sp">
+        </TextView>
+
+    </RelativeLayout>
+
+
+</RelativeLayout>

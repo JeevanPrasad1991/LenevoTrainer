@@ -1,0 +1,58 @@
+<resources>
+    <string name="app_name">Lenovo Trainer</string>
+
+    <string name="navigation_drawer_open">Open navigation drawer</string>
+    <string name="navigation_drawer_close">Close navigation drawer</string>
+
+    <string name="action_settings">Settings</string>
+
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <!-- Strings related to login -->
+    <string name="prompt_user_id">User Id</string>
+    <string name="prompt_password">Password</string>
+    <string name="action_sign_in">Login</string>
+    <string name="action_sign_in_short">Sign in</string>
+    <string name="error_invalid_email">This email address is invalid</string>
+    <string name="error_invalid_password">This password is too short</string>
+    <string name="error_incorrect_password">This password is incorrect</string>
+    <string name="error_field_required">This field is required</string>
+    <string name="title_activity_splash_screen">SplashScreenActivity</string>
+    <string name="title_activity_add_store">Add New Store</string>
+
+    <!--- String related to store add entry -->
+    <string name="prompt_store_name">Store Name</string>
+    <string name="store_Address">Store Address</string>
+    <string name="prompt_store_shop_no">Shop No.</string>
+    <string name="prompt_market_name">Market/Mall Name</string>
+    <string name="prompt_locality">Locality</string>
+    <string name="prompt_city">City</string>
+    <string name="prompt_telephone1">Telephone1</string>
+    <string name="prompt_telephone2">Telephone2</string>
+    <string name="prompt_email_address">Email Address</string>
+    <string name="prompt_owner_name">Store Owner Name</string>
+    <string name="prompt_owner_contact_no">Store Owner Contact No.</string>
+    <string name="store_type">Store Type</string>
+    <string name="store_front_image">Store Front Picture</string>
+
+    <string name="help_str">If You Have Any Query \n You Can Call To Help Desk</string>
+
+
+    <string name="title_activity_geo_tag">Geo Tag</string>
+    <string name="title_activity_posm">POSM</string>
+    <string name="title_activity_help">Help</string>
+    <string name="title_activity_store_list">Store List</string>
+    <string name="title_activity_routetraining">Route Training</string>
+    <string name="title_activity_store_isd">Select Trainee</string>
+    <string name="title_activity_audit">Basic Hygiene</string>
+    <string name="title_activity_training">Training Delivery</string>
+    <string name="title_activity_post_trainig">Post Training Quiz</string>
+
+    <string name="checkout">Checkout</string>
+    <string name="title_activity_non_working_reason">NonWorkingReasonActivity</string>
+    <string name="title_activity_isdperformance">ISDPerformanceActivity</string>
+    <string name="title_activity_main2">Main2Activity</string>
+    <string name="title_activity_store_visited">StoreVisitedActivity</string>
+
+</resources>
