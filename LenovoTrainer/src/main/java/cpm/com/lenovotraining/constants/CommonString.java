@@ -16,7 +16,10 @@ public class CommonString {
     public static final String KEY_LONGT = "LONGITUDE";
     public static final String KEY_NEW_EMPLOYEE = "NEW_EMPLOYEE";
     public static final String KEY_NEW_ISD = "NEW_ISD";
+    public static final String KEY_TRAINNING_TOPIC = "TRAINNING_TOPIC";
+    public static final int CAPTURE_MEDIA = 131;
     public static final String KEY_AUDIT_DATA = "AUDIT_DATA";
+    public static final String KEY_N = "N";
 
     public static final String KEY_IS_QUIZ_DONE = "is_quiz_done";
 
@@ -25,6 +28,7 @@ public class CommonString {
     public static final String KEY_MANAGED = "MANAGED";
 
     public static final String KEY_TOPIC_CD = "TOPIC_CD";
+    public static final String KEY_TOPIC = "TOPIC";
 
     public static final String KEY_MID = "MID";
 
@@ -50,23 +54,23 @@ public class CommonString {
     public static final String METHOD_UPLOAD_XML = "DrUploadXml";
     public static final String SOAP_ACTION = "http://tempuri.org/";
 
-    public static final String  METHOD_UPLOAD_DR_STORE_COVERAGE ="UPLOAD_COVERAGE_TrainerNew";
+    public static final String METHOD_UPLOAD_DR_STORE_COVERAGE = "UPLOAD_COVERAGE_TrainerNew";
     public static final String MEHTOD_UPLOAD_COVERAGE_STATUS = "UploadCoverage_Status_Trainer";
 
-    public static final String  METHOD_UPLOAD_REASON_ATTENDANCE = "Attendance";
+    public static final String METHOD_UPLOAD_REASON_ATTENDANCE = "Attendance_NEW";
 
     public static final String METHOD_UPLOAD_IMAGE = "GetImageWithFolderName";
 
-    public static final String SOAP_ACTION_UPLOAD_IMAGE = "http://tempuri.org/"+METHOD_UPLOAD_IMAGE;
+    public static final String SOAP_ACTION_UPLOAD_IMAGE = "http://tempuri.org/" + METHOD_UPLOAD_IMAGE;
 
     public static final String FILE_PATH = Environment.getExternalStorageDirectory() + "/Lenovo_Trainer_Images/";
 
     public static final String UERNAME_OR_PASSWORD_IS_WRONG = "User id or password not matched with current user";
     public static final String NO_INTERNET_CONNECTION = "No internet connection found";
 
-    public static final String ONBACK_ALERT_MESSAGE="Unsaved data will be lost - Do you want to continue?";
+    public static final String ONBACK_ALERT_MESSAGE = "Unsaved data will be lost - Do you want to continue?";
 
-    public static final String DATA_DELETE_ALERT_MESSAGE="Saved data will be lost - Do you want to continue?";
+    public static final String DATA_DELETE_ALERT_MESSAGE = "Saved data will be lost - Do you want to continue?";
 
     public static final String METHOD_LOGIN = "UserLoginDetail_Trainer";
     public static final String SOAP_ACTION_LOGIN = "http://tempuri.org/"
@@ -107,11 +111,8 @@ public class CommonString {
     public static final String MESSAGE_NO_IMAGE = "No Image For Upload";
     public static final String MESSAGE_DATA_FIRST = "Upload Data First";
     public static final String MESSAGE_IMAGE_UPLOAD = "Upload Images";
-    public static final String MESSAGE_DATA_ALREADY_UPLOADED =  "Data Already Uploaded";
+    public static final String MESSAGE_DATA_ALREADY_UPLOADED = "Data Already Uploaded";
     public static final String MESSAGE_SOTORE_ALREADY_CLOSED = "Store Already Closed";
-
-    public static final String MESSAGE_TRAINING_DATA_ALREADY_FILLED = "Training Data Already Filled";
-
     public static final String MESSAGE_STORE_ALREADY_CHECKED_OUT = "Store Already Checked out";
 
     public static final String MESSAGE_FIRST_CHECKOUT = "First checkout from previous store";
@@ -139,15 +140,18 @@ public class CommonString {
     public static final String TABLE_STORE_DATA = "STORE_DATA";
 
     public static final String TABLE_ANSWERED_DATA = "ANSWERED_DATA";
+    ////table audit data
     public static final String TABLE_CHECKLIST_INSERTED_DATA = "CHECKLIST_INSERTED_DATA";
+    public static final String TABLE_INSERT_OPENINGHEADER_DATA = "TABLE_INSERT_OPENINGHEADER_DATA";
 
     public static final String TABLE_NEW_ISD = "NEW_ISD";
 
     public static final String TABLE_ADD_NEW_EMPLOYEE = "ADD_NEW_EMPLOYEE";
 
+
     public static final String TABLE_COVERAGE_DATA = "COVERAGE_DATA";
 
-    public static final String KEY_ID ="KEY_ID";
+    public static final String KEY_ID = "KEY_ID";
     public static final String KEY_CITY = "CITY";
     public static final String KEY_EMAIL = "EMAIL";
     public static final String KEY_LOCALITY = "LOCALITY";
@@ -183,12 +187,14 @@ public class CommonString {
     public static final String KEY_L = "Leave";
     public static final String KEY_VALID = "Valid";
     public static final String STORE_STATUS_LEAVE = "L";
-
+    public static final String KEY_INVALID = "INVALID";
     public static final String KEY_QUESTION_CD = "QUESTION_CD";
     public static final String KEY_ANSWER_CD = "ANSWER_CD";
     public static final String KEY_ANSWER = "ANSWER";
 
     public static final String KEY_STORE_CD = "STORE_CD";
+    public static final String KEY_CHECKLIST_CATEGORY_CD = "CHECKLIST_CATEGORY_CD";
+
 
     public static final String CREATE_TABLE_COVERAGE_DATA = "CREATE TABLE  IF NOT EXISTS "
             + TABLE_COVERAGE_DATA + " ("
@@ -215,7 +221,7 @@ public class CommonString {
             + KEY_ID
             + " INTEGER PRIMARY KEY AUTOINCREMENT ,"
             + KEY_STORE_CD + " INTEGER,"
-            + KEY_TOPIC_CD+ " INTEGER,"
+            + KEY_TOPIC_CD + " INTEGER,"
             + KEY_QUESTION_CD + " INTEGER,"
             + KEY_ANSWER + " VARCHAR,"
             + KEY_ANSWER_CD + " INTEGER,"
@@ -223,7 +229,7 @@ public class CommonString {
             + KEY_MID + " INTEGER,"
             + KEY_ISD_IMAGE + " VARCHAR,"
             + KEY_ISD_CD + " INTEGER)";
-    
+
     public static final String KEY_CHECKLIST_CD = "CHECKLIST_CD";
     public static final String KEY_CHECKLIST = "CHECKLIST";
     public static final String KEY_AVAILABILITY = "AVAILABILITY";
@@ -235,21 +241,36 @@ public class CommonString {
             + KEY_ID
             + " INTEGER PRIMARY KEY AUTOINCREMENT ,"
             + KEY_STORE_CD + " INTEGER,"
-            + KEY_ISD_CD+ " INTEGER,"
+            + KEY_ISD_CD + " INTEGER,"
             + KEY_ISD_NAME + " VARCHAR )";
 
-    public static final String CREATE_TABLE_CHECKLIST_INSERTED_DATA = "CREATE TABLE "
-            + TABLE_CHECKLIST_INSERTED_DATA
+
+    public static final String CREATE_TABLE_CHECKLIST_HEADER_DATA = "CREATE TABLE "
+            + TABLE_INSERT_OPENINGHEADER_DATA
             + " ("
             + KEY_ID
             + " INTEGER PRIMARY KEY AUTOINCREMENT ,"
             + KEY_STORE_CD + " INTEGER,"
-            + KEY_ISD_CD+ " INTEGER,"
+            + KEY_ISD_CD + " INTEGER,"
+            + "CHECKLIST_CATEGORY_CD" + " INTEGER,"
+            + "CHECKLIST_CATEGORY" + " VARCHAR,"
+            + KEY_MID + " INTEGER)";
+
+
+    public static final String CREATE_TABLE_CHECKLIST_INSERTED_DATA = "CREATE TABLE "
+            + TABLE_CHECKLIST_INSERTED_DATA
+            + " ("
+            + KEY_STORE_CD + " INTEGER,"
+            + KEY_ISD_CD + " INTEGER,"
             + KEY_CHECKLIST_CD + " INTEGER,"
             + KEY_CHECKLIST + " VARCHAR,"
             + KEY_MID + " INTEGER,"
+            + "Common_Id" + " INTEGER,"
+            + "CHECKLIST_CATEGORY_CD" + " INTEGER,"
+            + "CHECKLIST_CATEGORY" + " VARCHAR,"
             + KEY_AVAILABILITY + " INTEGER)";
-   // + KEY_ISD_IMAGE + " VARCHAR,"
+
+
 
     public static final String CREATE_TABLE_ADD_NEW_EMPLOYEE_DATA = "CREATE TABLE "
             + TABLE_ADD_NEW_EMPLOYEE
@@ -257,35 +278,12 @@ public class CommonString {
             + KEY_ID
             + " INTEGER PRIMARY KEY AUTOINCREMENT ,"
             + KEY_STORE_CD + " INTEGER,"
-            + KEY_NAME+ " VARCHAR,"
+            + KEY_NAME + " VARCHAR,"
             + KEY_EMAIL + " VARCHAR,"
             + KEY_IS_ISD + " VARCHAR,"
-            + KEY_PHONE_NO + " VARCHAR)";
-
-
-    public static final String CREATE_TABLE_STORE_DATA = "CREATE TABLE "
-            + TABLE_STORE_DATA
-            + " ("
-            + KEY_ID
-            + " INTEGER PRIMARY KEY AUTOINCREMENT ,"
-            + KEY_CITY + " VARCHAR,"
-            + KEY_EMAIL + " VARCHAR,"
-            + KEY_LOCALITY + " VARCHAR,"
-            + KEY_OWNER_NAME + " VARCHAR,"
-            + KEY_SHOP_NO + " VARCHAR,"
-            + KEY_MARKET_NAME + " VARCHAR,"
-            + KEY_STORE_IMAGE + " VARCHAR,"
-            + KEY_STORE_NAME + " VARCHAR,"
-            + KEY_STORE_TYPE + " VARCHAR,"
-            + KEY_STORE_TYPE_CD + " INTEGER,"
-            + KEY_TELEPHONE_NO_ONE + " VARCHAR,"
-            + KEY_TELEPHONE_NO_TWO + " VARCHAR,"
-            + KEY_LATITUDE + " REAL,"
-            + KEY_LONGITUDE + " REAL,"
-            + KEY_VISIT_DATE + " VARCHAR,"
-            + KEY_UPLOAD_STATUS + " VARCHAR,"
-            + KEY_OWNER_CONTACT_NO + " VARCHAR)";
-
+            + KEY_IMAGE + " VARCHAR,"
+            + KEY_MANAGED + " INTEGER,"
+            + KEY_PHONE_NO + " INTEGER)";
 
 
     //Table POSM DATA
@@ -316,6 +314,42 @@ public class CommonString {
             + " VARCHAR,"
             + "FRONT_IMAGE" + " VARCHAR)";
 
+    public static final String TABLE_SALETEAM_TRAINEE_DATA = "SALETEAM_TRAINEE_DATA";
+    public static final String CREATE_TABLE_SALETEAM_TRAINEE_DATA = "CREATE TABLE IF NOT EXISTS "
+            + TABLE_SALETEAM_TRAINEE_DATA
+            + " ("
+            + "KEY_ID"
+            + " INTEGER PRIMARY KEY AUTOINCREMENT ,"
+            + "VISIT_DATE"
+            + " VARCHAR,"
+            + "TOPIC_CD"
+            + " INTEGER,"
+            + "USER_ID"
+            + " VARCHAR,"
+            + "TOPIC"
+            + " VARCHAR,"
+            + "STATUS"
+            + " VARCHAR,"
+            + "TRAINEE_CD"
+            + " INTEGER,"
+            + "TRAINEE_NAME" + " VARCHAR)";
+
+
+    public static final String TABLE_TRAINING_TOPIC_DATA = "TABLE_TRAINING_TOPIC_DATA";
+    public static final String CREATE_TABLE_TRAINING_TOPC_DATA = "CREATE TABLE IF NOT EXISTS "
+            + TABLE_TRAINING_TOPIC_DATA
+            + " ("
+            + "VISIT_DATE"
+            + " VARCHAR,"
+            + "TOPIC_CD"
+            + " INTEGER,"
+            + "TOPIC"
+            + " VARCHAR,"
+            + "ISD_CD"
+            + " INTEGER,"
+            + "STORE_CD"
+            + " INTEGER,"
+            + "MID" + " INTEGER)";
 
 
 }

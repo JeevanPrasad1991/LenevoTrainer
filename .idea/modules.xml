@@ -4,6 +4,7 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/LenevoTrainer.iml" filepath="$PROJECT_DIR$/LenevoTrainer.iml" />
       <module fileurl="file://$PROJECT_DIR$/LenovoTrainer/LenovoTrainer.iml" filepath="$PROJECT_DIR$/LenovoTrainer/LenovoTrainer.iml" />
+      <module fileurl="file://$PROJECT_DIR$/annca/annca.iml" filepath="$PROJECT_DIR$/annca/annca.iml" />
     </modules>
   </component>
 </project>

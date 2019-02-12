@@ -48,16 +48,13 @@ public class ISDPerformanceActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_isdperformance);
-
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
 
         performance_data = (RecyclerView) findViewById(R.id.rec_performance);
         linearLayout = (LinearLayout) findViewById(R.id.no_data_lay);
-
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         store_cd = preferences.getString(CommonString.KEY_STORE_CD, null);
         visit_date = preferences.getString(CommonString.KEY_DATE, null);
@@ -132,12 +129,18 @@ public class ISDPerformanceActivity extends AppCompatActivity {
         // as you specify a parent activity in AndroidManifest.xml.
         int id = item.getItemId();
         if (id == android.R.id.home) {
-            // NavUtils.navigateUpFromSameTask(this);
-            finish();
             overridePendingTransition(R.anim.activity_back_in, R.anim.activity_back_out);
+            finish();
 
         }
 
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onBackPressed() {
+        super.onBackPressed();
+        overridePendingTransition(R.anim.activity_back_in, R.anim.activity_back_out);
+        finish();
     }
 }

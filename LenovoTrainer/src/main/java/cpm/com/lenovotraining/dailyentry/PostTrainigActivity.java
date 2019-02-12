@@ -39,6 +39,7 @@ import com.google.android.gms.location.LocationServices;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.HashMap;
 
 import cpm.com.lenovotraining.R;
 import cpm.com.lenovotraining.constants.CommonString;
@@ -49,10 +50,12 @@ import cpm.com.lenovotraining.xmlgettersetter.CoverageBean;
 import cpm.com.lenovotraining.xmlgettersetter.EmpCdIsdGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.QuizAnwserGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.QuizQuestionGettersetter;
+import cpm.com.lenovotraining.xmlgettersetter.TrainingTopicGetterSetter;
 
 import static android.widget.AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL;
 
-public class PostTrainigActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
+public class PostTrainigActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener, LocationListener {
     QuizAdapter adapter;
     RecyclerView recyclerView;
     Database db;
@@ -62,7 +65,10 @@ public class PostTrainigActivity extends AppCompatActivity implements GoogleApiC
     ArrayList<QuizAnwserGetterSetter> answered_list = new ArrayList<>();
     private SharedPreferences preferences = null;
     AddNewEmployeeGetterSetter addNewEmployeeGetterSetter;
-    ArrayList<AuditChecklistGetterSetter> auditChecklistGetterSetters = new ArrayList<>();
+
+    HashMap<AuditChecklistGetterSetter, ArrayList<AuditChecklistGetterSetter>> listDataChild = new HashMap<>();
+    ArrayList<AuditChecklistGetterSetter> listDataHeader = new ArrayList<>();
+    ArrayList<TrainingTopicGetterSetter> selectedTopicList = new ArrayList<>();
     //location
     // Location updates intervals in sec
     private static int UPDATE_INTERVAL = 500; // 5 sec
@@ -91,16 +97,22 @@ public class PostTrainigActivity extends AppCompatActivity implements GoogleApiC
         store_cd = preferences.getString(CommonString.KEY_STORE_CD, null);
         visit_date = preferences.getString(CommonString.KEY_DATE, null);
         username = preferences.getString(CommonString.KEY_USERNAME, null);
+        setTitle("Post Training Quiz - " + visit_date);
         topic_cd = getIntent().getStringExtra(CommonString.KEY_TOPIC_CD);
         isd_cd = getIntent().getStringExtra(CommonString.KEY_ISD_CD);
         training_mode_cd = getIntent().getStringExtra(CommonString.KEY_TRAINING_MODE_CD);
         managed = getIntent().getStringExtra(CommonString.KEY_MANAGED);
         isd_image = getIntent().getStringExtra(CommonString.KEY_ISD_IMAGE);
         addNewEmployeeGetterSetter = getIntent().getParcelableExtra(CommonString.KEY_NEW_EMPLOYEE);
-        auditChecklistGetterSetters = (ArrayList<AuditChecklistGetterSetter>) getIntent().getSerializableExtra(CommonString.KEY_AUDIT_DATA);
+        ///get audit data using intent
+        listDataChild = (HashMap<AuditChecklistGetterSetter, ArrayList<AuditChecklistGetterSetter>>) getIntent()
+                .getSerializableExtra(CommonString.KEY_AUDIT_DATA);
         empCdIsdGetterSetter = (EmpCdIsdGetterSetter) getIntent().getSerializableExtra(CommonString.KEY_NEW_ISD);
-        quiz = db.getAllQuizData(topic_cd);
-        quizQuestionGettersetters = db.getQuizQuestionData(topic_cd);
+
+        selectedTopicList = (ArrayList<TrainingTopicGetterSetter>) getIntent().getSerializableExtra(CommonString.KEY_TRAINNING_TOPIC);
+
+        quiz = db.getAllQuizData();
+        quizQuestionGettersetters = db.getQuizQuestionData();
         //Add dummy Answer data
         for (int i = 0; i < quiz.size(); i++) {
             QuizAnwserGetterSetter answer = new QuizAnwserGetterSetter();
@@ -116,14 +128,13 @@ public class PostTrainigActivity extends AppCompatActivity implements GoogleApiC
         recyclerView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrollStateChanged(RecyclerView recyclerView, int newState) {
+                recyclerView.clearFocus();
                 if (SCROLL_STATE_TOUCH_SCROLL == newState) {
                     View currentFocus = getCurrentFocus();
                     if (currentFocus != null) {
                         currentFocus.clearFocus();
                     }
                 }
-                // super.onScrollStateChanged(recyclerView, newState);
-
             }
         });
 
@@ -145,19 +156,44 @@ public class PostTrainigActivity extends AppCompatActivity implements GoogleApiC
                     builder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(DialogInterface dialog, int which) {
-                            //  db.updateCoverageStoreOutTime(store_cd, visit_date, getCurrentTime(), CommonString.KEY_VALID);
-                            long mid = 0;
-                            if (isd_cd.equals("0") && addNewEmployeeGetterSetter != null)
-                                mid = db.insertNewEmployeeData(addNewEmployeeGetterSetter, store_cd);
-                            db.insertAnsweredData(answered_list, store_cd, mid, isd_image);
-                            db.insertAuditChecklistData(auditChecklistGetterSetters, store_cd, isd_cd, mid);
-                            if (empCdIsdGetterSetter != null)
-                                db.insertNewIsdData(empCdIsdGetterSetter, store_cd);
-                            Intent intent = new Intent(PostTrainigActivity.this, RouteTrainingActivity.class);
-                            intent.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-                            startActivity(intent);
-                            overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-                            finish();
+                            try {
+
+                                long mid = 0;
+
+                                //aad new emp insert
+                                if (isd_cd.equals("0") && addNewEmployeeGetterSetter != null) {
+                                    mid = db.insertNewEmployeeData(addNewEmployeeGetterSetter, store_cd,managed);
+                                }
+
+                                ////quiz insert
+                                if (answered_list.size() > 0) {
+                                    db.insertAnsweredData(answered_list, store_cd, mid, isd_image);
+                                }
+
+                                if (selectedTopicList.size() > 0) {
+                                    db.insertTrainningTopicMultiData(selectedTopicList, store_cd, isd_cd, mid, visit_date);
+                                }
+
+                                //isd skill insert
+                                for (AuditChecklistGetterSetter key : listDataChild.keySet()) {
+                                    listDataHeader.add(key);
+                                    System.out.println(key);
+                                }
+
+                                db.insertAuditChecklistWithCategoryData(store_cd, isd_cd, mid, listDataChild, listDataHeader);
+//                               db.insertAuditChecklistData(auditChecklistGetterSetters, store_cd, isd_cd, mid);
+
+                                if (empCdIsdGetterSetter != null) {
+                                    db.insertNewIsdData(empCdIsdGetterSetter, store_cd);
+                                }
+                                Intent intent = new Intent(PostTrainigActivity.this, RouteTrainingActivity.class);
+                                intent.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
+                                startActivity(intent);
+                                overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+                                finish();
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
                         }
                     });
                     builder.setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
@@ -226,16 +262,13 @@ public class PostTrainigActivity extends AppCompatActivity implements GoogleApiC
 
             }
 
-
             holder.radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
                 @Override
                 public void onCheckedChanged(RadioGroup group, int checkedId) {
                     int id = holder.radioGroup.getCheckedRadioButtonId();
-                    String topic_cd = quizQuestionGettersetters.get(checkedId).getTOPIC_CD().get(0);
                     String question_cd = quizQuestionGettersetters.get(checkedId).getQUESTION_CD().get(0);
                     String ans_cd = quizQuestionGettersetters.get(checkedId).getANSWER_CD().get(0);
                     String ans = quizQuestionGettersetters.get(checkedId).getANSWER().get(0);
-
                     answered_list.get(position).setTopic_cd(topic_cd);
                     answered_list.get(position).setQuestion_cd(question_cd);
                     answered_list.get(position).setAnswer_cd(ans_cd);
@@ -250,13 +283,17 @@ public class PostTrainigActivity extends AppCompatActivity implements GoogleApiC
                 for (int k = 0; k < holder.radioGroup.getChildCount(); k++) {
                     if (holder.radioGroup.getChildAt(k).getId() == id) {
                         ((RadioButton) holder.radioGroup.getChildAt(k)).setChecked(true);
+                        ((RadioButton) holder.radioGroup.getChildAt(k)).setId(id);
                         holder.radioGroup.getChildAt(k);
                         recyclerView.clearFocus();
                     } else {
                         ((RadioButton) holder.radioGroup.getChildAt(k)).setChecked(false);
+                        ((RadioButton) holder.radioGroup.getChildAt(k)).setId(id);
                         recyclerView.clearFocus();
                     }
                 }
+
+            recyclerView.clearFocus();
 
         }
 
@@ -279,20 +316,9 @@ public class PostTrainigActivity extends AppCompatActivity implements GoogleApiC
         }
     }
 
-    public String getCurrentTime() {
-        Calendar m_cal = Calendar.getInstance();
-        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
-        String cdate = formatter.format(m_cal.getTime());
-        return cdate;
-
-    }
-
     @Override
     public void onConnected(Bundle bundle) {
-
-        mLastLocation = LocationServices.FusedLocationApi
-                .getLastLocation(mGoogleApiClient);
-
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             if (mLastLocation != null) {
@@ -335,14 +361,6 @@ public class PostTrainigActivity extends AppCompatActivity implements GoogleApiC
 
         checkPlayServices();
 
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (mGoogleApiClient.isConnected()) {
-            mGoogleApiClient.disconnect();
-        }
     }
 
     @Override

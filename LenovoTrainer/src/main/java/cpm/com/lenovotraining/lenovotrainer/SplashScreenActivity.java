@@ -15,7 +15,7 @@ import cpm.com.lenovotraining.R;
 
 public class SplashScreenActivity extends AppCompatActivity {
 
-    private static int SPLASH_TIME_OUT = 3000;
+    private static int SPLASH_TIME_OUT = 5000;
 
     public void onAttachedToWindow() {
         super.onAttachedToWindow();
@@ -27,9 +27,7 @@ public class SplashScreenActivity extends AppCompatActivity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_splash_screen);
-
         StartAnimations();
-
         new Handler().postDelayed(new Runnable() {
 
 			/*
@@ -39,32 +37,9 @@ public class SplashScreenActivity extends AppCompatActivity {
 
             @Override
             public void run() {
-                // This method will be executed once the timer is over
-                // Start your app main activity
-
-               /* SharedPreferences sharedpreferences = getSharedPreferences("MyPref", Context.MODE_PRIVATE);
-
-                boolean isLoggedIn = sharedpreferences.getBoolean("isLoggedIn", false);
-
-                if (isLoggedIn) {
-
-                    Intent i = new Intent(SplashScreenActivity.this, LoginActivity.class);
-                    startActivity(i);
-                } else {
-
-                    Intent i = new Intent(SplashScreenActivity.this, LoginActivity.class);
-                    startActivity(i);
-
-                }*/
-
-
-                // close this activity
-
                 Intent i = new Intent(SplashScreenActivity.this, LoginActivity.class);
                 startActivity(i);
-
                 overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-
                 finish();
             }
         }, SPLASH_TIME_OUT);

@@ -47,32 +47,23 @@ import cpm.com.lenovotraining.xmlgettersetter.CoverageBean;
 import cpm.com.lenovotraining.xmlgettersetter.FailureGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.JCPGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.QuizAnwserGetterSetter;
+import cpm.com.lenovotraining.xmlgettersetter.TrainingTopicGetterSetter;
 
 /**
  * Created by yadavendras on 16-09-2016.
  */
-public class CheckoutNUpload extends Activity{
-
+public class CheckoutNUpload extends Activity {
     private Dialog dialog;
     private ProgressBar pb;
     private TextView percentage, message;
     Data data;
-
-    private String store_id, store_intime, store_out_time, prev_date, date, result;
-
     private String visit_date, username, app_ver;
     private SharedPreferences preferences;
-
     Database database;
-    private int factor, k;
-
-    String errormsg = "";
+    String errormsg = "", prev_date;
     String Path;
-
     boolean up_success_flag = true;
-
     boolean isDialogShowing = false;
-
     private ArrayList<CoverageBean> coverageBeanlist = new ArrayList<>();
     String datacheck = "";
     String[] words;
@@ -83,10 +74,12 @@ public class CheckoutNUpload extends Activity{
     ArrayList<AddNewEmployeeGetterSetter> newEmpData;
     private FailureGetterSetter failureGetterSetter = null;
     ArrayList<JCPGetterSetter> jcplist;
-    ArrayList<CoverageBean> coverageBean;
-    public static String latitude = "0.0";
-    public static String longitude = "0.0";
+    ArrayList<CoverageBean> coverageBean = new ArrayList<>();
     ArrayList<GeotaggingBeans> geodata = new ArrayList<GeotaggingBeans>();
+    ArrayList<TrainingTopicGetterSetter> traineCDataList = new ArrayList<>();
+    ArrayList<TrainingTopicGetterSetter> trainingTopicList = new ArrayList<>();
+    ArrayList<AddNewEmployeeGetterSetter> newEmpMannagedZeroData = new ArrayList<>();
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -99,42 +92,23 @@ public class CheckoutNUpload extends Activity{
         database = new Database(this);
         database.open();
         Path = CommonString.FILE_PATH;
-        if(!isCheckoutDataExist()){
+        if (!isCheckoutDataExist()) {
             new UploadDataTask(this).execute();
         }
-
     }
 
-    public boolean isCheckoutDataExist(){
-
-        boolean flag=false;
-
-        jcplist=database.getAllJCPData();
-
-        for(int i=0;i<jcplist.size();i++){
-
-            if(!jcplist.get(i).getVISIT_DATE().get(0).equals(visit_date)){
-                prev_date=jcplist.get(i).getVISIT_DATE().get(0);
-                    store_id = jcplist.get(i).getSTORE_CD().get(0);
-                    coverageBean = database.getCoverageSpecificData(store_id, visit_date);
-                    if(coverageBean.size()>0 && coverageBean.get(0).getStatus().equals(CommonString.KEY_VALID)){
-                        flag=true;
-                        username = coverageBean.get(0).getUserId();
-                        store_intime = coverageBean.get(0).getInTime();
-                        store_out_time = coverageBean.get(0).getOutTime();
-                        if(store_out_time ==null || store_out_time.equals("")){
-                            store_out_time = getCurrentTime();
-                        }
-                        date = coverageBean.get(0).getVisitDate();
-                        latitude = coverageBean.get(0).getLatitude();
-                        longitude = coverageBean.get(0).getLongitude();
-                        new BackgroundTask(this).execute();
-
-                        break;
-                    }
-
-
-
+    public boolean isCheckoutDataExist() {
+        boolean flag = false;
+        jcplist = database.getAllJCPData();
+        for (int i = 0; i < jcplist.size(); i++) {
+            if (!jcplist.get(i).getVISIT_DATE().get(0).equals(visit_date)) {
+                prev_date = jcplist.get(i).getVISIT_DATE().get(0);
+                coverageBean = database.getCoverageSpecificData(jcplist.get(i).getSTORE_CD().get(0), jcplist.get(i).getVISIT_DATE().get(0));
+                if (coverageBean.size() > 0 && coverageBean.get(0).getStatus().equals(CommonString.KEY_VALID)) {
+                    flag = true;
+                    new BackgroundTask(this).execute();
+                    break;
+                }
             }
         }
 
@@ -142,19 +116,15 @@ public class CheckoutNUpload extends Activity{
     }
 
     public String UploadImage(String path, String folder_name) throws Exception {
-
         errormsg = "";
         BitmapFactory.Options o = new BitmapFactory.Options();
         o.inJustDecodeBounds = true;
         BitmapFactory.decodeFile(Path + path, o);
-
         // The new size we want to scale to
         final int REQUIRED_SIZE = 1639;
-
         // Find the correct scale value. It should be the power of 2.
         int width_tmp = o.outWidth, height_tmp = o.outHeight;
         int scale = 1;
-
         while (true) {
             if (width_tmp < REQUIRED_SIZE && height_tmp < REQUIRED_SIZE)
                 break;
@@ -166,20 +136,14 @@ public class CheckoutNUpload extends Activity{
         // Decode with inSampleSize
         BitmapFactory.Options o2 = new BitmapFactory.Options();
         o2.inSampleSize = scale;
-        Bitmap bitmap = BitmapFactory.decodeFile(
-                Path + path, o2);
-
+        Bitmap bitmap = BitmapFactory.decodeFile(Path + path, o2);
         ByteArrayOutputStream bao = new ByteArrayOutputStream();
         bitmap.compress(Bitmap.CompressFormat.JPEG, 90, bao);
         byte[] ba = bao.toByteArray();
         String ba1 = Base64.encodeBytes(ba);
-
-        SoapObject request = new SoapObject(CommonString.NAMESPACE,
-                CommonString.METHOD_UPLOAD_IMAGE);
-
+        SoapObject request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_IMAGE);
         String[] split = path.split("/");
         String path1 = split[split.length - 1];
-
         request.addProperty("img", ba1);
         request.addProperty("name", path1);
         request.addProperty("FolderName", folder_name);
@@ -231,9 +195,9 @@ public class CheckoutNUpload extends Activity{
 
     public void showMessage(String msg) {
 
-        if(!isDialogShowing){
+        if (!isDialogShowing) {
 
-            isDialogShowing =true;
+            isDialogShowing = true;
 
             new AlertDialog.Builder(CheckoutNUpload.this)
                     .setTitle("Alert Dialog")
@@ -281,22 +245,12 @@ public class CheckoutNUpload extends Activity{
             try {
 
                 data = new Data();
-
-                coverageBeanlist = database.getCoverageData(visit_date);
-
-                if (coverageBeanlist.size() > 0) {
-
-                    if (coverageBeanlist.size() == 1) {
-                        factor = 50;
-                    } else {
-
-                        factor = 100 / (coverageBeanlist.size());
-                    }
-                }
-
+                data.value = 10;
+                data.name = "Uploading Data";
+                publishProgress(data);
+                database.open();
+                coverageBeanlist = database.getCoverageData(prev_date);
                 for (int i = 0; i < coverageBeanlist.size(); i++) {
-
-
                     if (!coverageBeanlist.get(i).getStatus().equalsIgnoreCase(CommonString.KEY_U)) {
                         String onXML = "[DATA][USER_DATA][STORE_CD]"
                                 + coverageBeanlist.get(i).getStoreId()
@@ -315,7 +269,7 @@ public class CheckoutNUpload extends Activity{
                                 + "[/OUT_TIME][UPLOAD_STATUS]"
                                 + "N"
                                 + "[/UPLOAD_STATUS][USER_ID]" + username
-                                + "[/USER_ID][TMODE_CD]" + coverageBeanlist.get(i).getTraining_mode_cd()+
+                                + "[/USER_ID][TMODE_CD]" + coverageBeanlist.get(i).getTraining_mode_cd() +
                                 "[/TMODE_CD][MANAGE]" + coverageBeanlist.get(i).getManaged() +
                                 "[/MANAGE][IMAGE_URL]" + coverageBeanlist.get(i).getImage()
                                 + "[/IMAGE_URL][REASON_ID]"
@@ -331,18 +285,14 @@ public class CheckoutNUpload extends Activity{
                         envelope.dotNet = true;
                         envelope.setOutputSoapObject(request);
                         HttpTransportSE androidHttpTransport = new HttpTransportSE(CommonString.URL);
-                        androidHttpTransport.call(CommonString.SOAP_ACTION+CommonString.METHOD_UPLOAD_DR_STORE_COVERAGE,
-                                envelope);
+                        androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_DR_STORE_COVERAGE, envelope);
                         Object result = (Object) envelope.getResponse();
-
                         datacheck = result.toString();
                         datacheck = datacheck.replace("\"", "");
                         words = datacheck.split("\\;");
                         validity = (words[0]);
-
                         if (validity.equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
                             database.updateCoverageStatus(coverageBeanlist.get(i).getMID(), CommonString.KEY_P);
-
                             database.updateStoreStatusOnLeave(coverageBeanlist.get(i).getStoreId(), coverageBeanlist.get(i).getVisitDate(), CommonString.KEY_P);
                         } else {
                             if (result.toString().equalsIgnoreCase(CommonString.KEY_FALSE)) {
@@ -354,166 +304,24 @@ public class CheckoutNUpload extends Activity{
 
                         }
                         mid = Integer.parseInt((words[1]));
-                        data.value =30;
-                        data.name = "Uploading";
+                        data.value = 20;
+                        data.name = "Uploading Coverage Data";
                         publishProgress(data);
                         String final_xml = "";
 
 
-                        //uploading Quiz data
-                        final_xml = "";
-                        onXML = "";
-                        quizData = database.getQuizData(coverageBeanlist.get(i).getStoreId());
-
-                        if (quizData.size()>0) {
-
-                            for (int j = 0; j < quizData.size(); j++) {
-                                if(quizData.get(j).getIsd_cd()!=null){
-                                    onXML = "[QUIZ_DATA]"
-                                            + "[ISD_CD]"
-                                            + quizData.get(j).getIsd_cd()
-                                            + "[/ISD_CD]"
-                                            + "[MID]"
-                                            + mid
-                                            + "[/MID]"
-                                            + "[CREATED_BY]"
-                                            + username
-                                            + "[/CREATED_BY]"
-                                            + "[TOPIC_CD]"
-                                            + quizData.get(j).getTopic_cd()
-                                            + "[/TOPIC_CD]"
-                                            + "[QUESTION_CD]"
-                                            + quizData.get(j).getQuestion_cd()
-                                            + "[/QUESTION_CD]"
-                                            + "[ANSWER_CD]"
-                                            + quizData.get(j).getAnswer_cd()
-                                            + "[/ANSWER_CD]"
-                                            + "[TRAINING_MODE_CD]"
-                                            + quizData.get(j).getTraining_mode_cd()
-                                            + "[/TRAINING_MODE_CD]"
-                                            + "[isd_image]"
-                                            +  quizData.get(j).getKey_isd_image()
-                                            + "[/isd_image]"
-                                            + "[/QUIZ_DATA]";
-
-                                    final_xml = final_xml + onXML;
-                                }
-
-                            }
-
-                            final String sos_xml = "[DATA]" + final_xml + "[/DATA]";
-
-                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
-                            request.addProperty("XMLDATA", sos_xml);
-                            request.addProperty("KEYS", "QUIZ_DATA_NEW");
-                            request.addProperty("USERNAME", username);
-                            request.addProperty("MID", mid);
-
-                            envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
-                            envelope.dotNet = true;
-                            envelope.setOutputSoapObject(request);
-
-                            androidHttpTransport = new HttpTransportSE(CommonString.URL);
-
-                            androidHttpTransport.call(CommonString.SOAP_ACTION+CommonString.METHOD_UPLOAD_XML, envelope);
-                            result = (Object) envelope.getResponse();
-
-                            if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
-
-                            if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
-
-                            if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
-
-
-                        }
-
-
-                        //		uploading Audit data
-                        final_xml = "";
-                        onXML = "";
-                        auditData = database.getAuditInsertedData(coverageBeanlist.get(i).getStoreId());
-
-                        if (auditData.size()>0) {
-
-                            for (int j = 0; j < auditData.size(); j++) {
-
-                                onXML = "[AUDIT_DATA][ISD_CD]"
-                                        + auditData.get(j).getIsd_cd()
-                                        + "[/ISD_CD]"
-                                        + "[MID]"
-                                        + mid
-                                        + "[/MID]"
-                                        + "[CREATED_BY]"
-                                        + username
-                                        + "[/CREATED_BY]"
-                                        + "[CHECKLIST_CD]"
-                                        + auditData.get(j).getCHECKLIST_CD().get(0)
-                                        + "[/CHECKLIST_CD]"
-                                        + "[AVAILABILITY]"
-                                        + auditData.get(j).getAvailability()
-                                        + "[/AVAILABILITY]"
-                                        + "[/AUDIT_DATA]";
-
-                                final_xml = final_xml + onXML;
-
-                            }
-
-                            final String audit_xml = "[DATA]" + final_xml
-                                    + "[/DATA]";
-
-                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
-                            request.addProperty("XMLDATA", audit_xml);
-                            request.addProperty("KEYS", "AUDIT_DATA");
-                            request.addProperty("USERNAME", username);
-                            request.addProperty("MID", mid);
-
-                            envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
-                            envelope.dotNet = true;
-                            envelope.setOutputSoapObject(request);
-
-                            androidHttpTransport = new HttpTransportSE(
-                                    CommonString.URL);
-
-                            androidHttpTransport.call(
-                                    CommonString.SOAP_ACTION+CommonString.METHOD_UPLOAD_XML,
-                                    envelope);
-                            result = (Object) envelope.getResponse();
-
-
-                            if (!result.toString().equalsIgnoreCase(
-                                    CommonString.KEY_SUCCESS)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
-
-                            if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
-
-                            if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
-
-                        }
-
                         //		uploading New Employee data
                         final_xml = "";
                         onXML = "";
+                        database.open();
                         newEmpData = database.getNewEmployeeInsertedData(coverageBeanlist.get(i).getStoreId());
-
-                        if (newEmpData.size()>0) {
+                        if (newEmpData.size() > 0) {
                             for (int j = 0; j < newEmpData.size(); j++) {
                                 String isIsd;
-                                if(newEmpData.get(j).isIsd()){
-                                    isIsd= "1";
-                                }
-                                else{
-                                    isIsd= "0";
+                                if (newEmpData.get(j).isIsd()) {
+                                    isIsd = "1";
+                                } else {
+                                    isIsd = "0";
                                 }
                                 onXML = "[NEW_EMPLOYEE_DATA][ISD_CD]"
                                         + "0"
@@ -542,6 +350,7 @@ public class CheckoutNUpload extends Activity{
                                         + "[/NEW_EMPLOYEE_DATA]";
 
                                 final_xml = final_xml + onXML;
+
                             }
 
                             final String employee_xml = "[DATA]" + final_xml + "[/DATA]";
@@ -553,120 +362,33 @@ public class CheckoutNUpload extends Activity{
                             envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                             envelope.dotNet = true;
                             envelope.setOutputSoapObject(request);
-
                             androidHttpTransport = new HttpTransportSE(CommonString.URL);
-
-                            androidHttpTransport.call(CommonString.SOAP_ACTION+CommonString.METHOD_UPLOAD_XML, envelope);
+                            androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML, envelope);
                             result = (Object) envelope.getResponse();
                             if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
                                 return CommonString.METHOD_UPLOAD_XML;
                             }
-
                             if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
                                 return CommonString.METHOD_UPLOAD_XML;
                             }
-                            if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
-
-                        }
-
-
-
-                        //uploading Quiz data for new Employee
-                        final_xml = "";
-                        onXML = "";
-                        quizData = database.getQuizNewEmployeeData(coverageBeanlist.get(i).getStoreId());
-
-                        if (quizData.size()>0) {
-
-                            for (int j = 0; j < quizData.size(); j++) {
-
-
-
-                                if(quizData.get(j).getIsd_cd()!=null){
-                                    onXML = "[QUIZ_DATA_NEW_EMPLOYEE]"
-                                            + "[ISD_CD]"
-                                            + quizData.get(j).getIsd_cd()
-                                            + "[/ISD_CD]"
-                                            + "[MID]"
-                                            + mid
-                                            + "[/MID]"
-                                            + "[CREATED_BY]"
-                                            + username
-                                            + "[/CREATED_BY]"
-                                            + "[TOPIC_CD]"
-                                            + quizData.get(j).getTopic_cd()
-                                            + "[/TOPIC_CD]"
-                                            + "[QUESTION_CD]"
-                                            + quizData.get(j).getQuestion_cd()
-                                            + "[/QUESTION_CD]"
-                                            + "[ANSWER_CD]"
-                                            + quizData.get(j).getAnswer_cd()
-                                            + "[/ANSWER_CD]"
-                                            + "[TRAINING_MODE_CD]"
-                                            + quizData.get(j).getTraining_mode_cd()
-                                            + "[/TRAINING_MODE_CD]"
-                                            + "[KEY_ID]"
-                                            + quizData.get(j).getKey_id()
-                                            + "[/KEY_ID]"
-                                            + "[isd_image]"
-                                            +  quizData.get(j).getKey_isd_image()
-                                            + "[/isd_image]"
-                                            + "[/QUIZ_DATA_NEW_EMPLOYEE]";
-
-                                    final_xml = final_xml + onXML;
-                                }
-
-                            }
-
-                            final String sos_xml = "[DATA]" + final_xml + "[/DATA]";
-
-                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
-                            request.addProperty("XMLDATA", sos_xml);
-                            request.addProperty("KEYS", "QUIZ_DATA_NEW_EMPLOYEE_NEW");
-                            request.addProperty("USERNAME", username);
-                            request.addProperty("MID", mid);
-
-                            envelope = new SoapSerializationEnvelope(
-                                    SoapEnvelope.VER11);
-                            envelope.dotNet = true;
-                            envelope.setOutputSoapObject(request);
-
-                            androidHttpTransport = new HttpTransportSE(
-                                    CommonString.URL);
-
-                            androidHttpTransport.call(
-                                    CommonString.SOAP_ACTION+CommonString.METHOD_UPLOAD_XML,
-                                    envelope);
-                            result = (Object) envelope.getResponse();
-
-                            if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
-
-                            if (result.toString().equalsIgnoreCase(
-                                    CommonString.KEY_NO_DATA)) {
-                                return CommonString.METHOD_UPLOAD_XML;
-                            }
 
                             if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
                                 return CommonString.METHOD_UPLOAD_XML;
                             }
 
-
+                            data.value = 30;
+                            data.name = "NEW EMPLOYEE DATA";
+                            publishProgress(data);
                         }
 
 
                         //		uploading Audit data for New Employee
                         final_xml = "";
                         onXML = "";
+                        database.open();
                         auditData = database.getAuditInsertedNewEmpData(coverageBeanlist.get(i).getStoreId());
-
-                        if (auditData.size()>0) {
-
+                        if (auditData.size() > 0) {
                             for (int j = 0; j < auditData.size(); j++) {
-
                                 onXML = "[AUDIT_DATA_NEW_EMPLOYEE][ISD_CD]"
                                         + auditData.get(j).getIsd_cd()
                                         + "[/ISD_CD]"
@@ -710,7 +432,7 @@ public class CheckoutNUpload extends Activity{
                                     CommonString.URL);
 
                             androidHttpTransport.call(
-                                    CommonString.SOAP_ACTION+CommonString.METHOD_UPLOAD_XML,
+                                    CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML,
                                     envelope);
                             result = (Object) envelope.getResponse();
 
@@ -729,10 +451,423 @@ public class CheckoutNUpload extends Activity{
                                     CommonString.KEY_FAILURE)) {
                                 return CommonString.METHOD_UPLOAD_XML;
                             }
+                            data.value = 40;
+                            data.name = "AUDIT DATA NEW EMPLOYEE";
+                            publishProgress(data);
+
+                        }
+
+                        //		uploading TRAINING_TOPIC_DATA for new employee
+                        final_xml = "";
+                        onXML = "";
+                        database.open();
+                        ArrayList<TrainingTopicGetterSetter> trainingTopicList = database.getTrainningTopicfORNEWEMPLOYEEData(coverageBeanlist.get(i).getStoreId());
+                        if (trainingTopicList.size() > 0) {
+
+                            for (int j = 0; j < trainingTopicList.size(); j++) {
+
+                                onXML = "[TRAINING_TOPIC_NEW_EMPLOYEE_DATA][ISD_CD]"
+                                        + trainingTopicList.get(j).getIsd_cd()
+                                        + "[/ISD_CD]"
+                                        + "[MID]"
+                                        + mid
+                                        + "[/MID]"
+                                        + "[CREATED_BY]"
+                                        + username
+                                        + "[/CREATED_BY]"
+                                        + "[KEY_ID]"
+                                        + trainingTopicList.get(j).getKey_id()
+                                        + "[/KEY_ID]"
+                                        + "[TOPIC_CD]"
+                                        + trainingTopicList.get(j).getTOPIC_CD().get(0)
+                                        + "[/TOPIC_CD]"
+                                        + "[VISIT_DATE]"
+                                        + coverageBeanlist.get(i).getVisitDate()
+                                        + "[/VISIT_DATE]"
+                                        + "[/TRAINING_TOPIC_NEW_EMPLOYEE_DATA]";
+
+                                final_xml = final_xml + onXML;
+
+                            }
+
+                            final String audit_xml = "[DATA]" + final_xml + "[/DATA]";
+
+                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
+                            request.addProperty("XMLDATA", audit_xml);
+                            request.addProperty("KEYS", "TRAINING_TOPIC_NEW_EMPLOYEE_DATA");
+                            request.addProperty("USERNAME", username);
+                            request.addProperty("MID", mid);
+                            envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                            envelope.dotNet = true;
+                            envelope.setOutputSoapObject(request);
+                            androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                            androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML,
+                                    envelope);
+                            result = (Object) envelope.getResponse();
+                            if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            data.value = 50;
+                            data.name = "TRAINING T N EMPLOYEE DATA";
+                            publishProgress(data);
 
                         }
 
 
+                        //uploading Quiz data for new Employee
+                        final_xml = "";
+                        onXML = "";
+                        database.open();
+                        quizData = database.getQuizNewEmployeeData(coverageBeanlist.get(i).getStoreId());
+                        if (quizData.size() > 0) {
+                            for (int j = 0; j < quizData.size(); j++) {
+                                if (quizData.get(j).getIsd_cd() != null) {
+                                    onXML = "[QUIZ_DATA_NEW_EMPLOYEE]"
+                                            + "[ISD_CD]"
+                                            + quizData.get(j).getIsd_cd()
+                                            + "[/ISD_CD]"
+                                            + "[MID]"
+                                            + mid
+                                            + "[/MID]"
+                                            + "[CREATED_BY]"
+                                            + username
+                                            + "[/CREATED_BY]"
+                                            + "[TOPIC_CD]"
+                                            + quizData.get(j).getTopic_cd()
+                                            + "[/TOPIC_CD]"
+                                            + "[QUESTION_CD]"
+                                            + quizData.get(j).getQuestion_cd()
+                                            + "[/QUESTION_CD]"
+                                            + "[ANSWER_CD]"
+                                            + quizData.get(j).getAnswer_cd()
+                                            + "[/ANSWER_CD]"
+                                            + "[TRAINING_MODE_CD]"
+                                            + quizData.get(j).getTraining_mode_cd()
+                                            + "[/TRAINING_MODE_CD]"
+                                            + "[KEY_ID]"
+                                            + quizData.get(j).getKey_id()
+                                            + "[/KEY_ID]"
+                                            + "[isd_image]"
+                                            + quizData.get(j).getKey_isd_image()
+                                            + "[/isd_image]"
+                                            + "[/QUIZ_DATA_NEW_EMPLOYEE]";
+
+                                    final_xml = final_xml + onXML;
+                                }
+
+                            }
+
+                            final String sos_xml = "[DATA]" + final_xml + "[/DATA]";
+
+                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
+                            request.addProperty("XMLDATA", sos_xml);
+                            request.addProperty("KEYS", "QUIZ_DATA_NEW_EMPLOYEE_NEW");
+                            request.addProperty("USERNAME", username);
+                            request.addProperty("MID", mid);
+                            envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                            envelope.dotNet = true;
+                            envelope.setOutputSoapObject(request);
+                            androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                            androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML, envelope);
+                            result = (Object) envelope.getResponse();
+                            if (!result.toString().equalsIgnoreCase(
+                                    CommonString.KEY_SUCCESS)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            if (result.toString().equalsIgnoreCase(
+                                    CommonString.KEY_NO_DATA)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            if (result.toString().equalsIgnoreCase(
+                                    CommonString.KEY_FAILURE)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            data.value = 60;
+                            data.name = "QUIZ DATA NEW EMPLOYEE NEW";
+                            publishProgress(data);
+
+                        }
+
+
+                        //uploading Quiz data
+                        final_xml = "";
+                        onXML = "";
+                        database.open();
+                        quizData = database.getQuizData(coverageBeanlist.get(i).getStoreId());
+                        if (quizData.size() > 0) {
+
+                            for (int j = 0; j < quizData.size(); j++) {
+
+                                if (quizData.get(j).getIsd_cd() != null) {
+                                    onXML = "[QUIZ_DATA]"
+                                            + "[ISD_CD]"
+                                            + quizData.get(j).getIsd_cd()
+                                            + "[/ISD_CD]"
+                                            + "[MID]"
+                                            + mid
+                                            + "[/MID]"
+                                            + "[CREATED_BY]"
+                                            + username
+                                            + "[/CREATED_BY]"
+                                            + "[TOPIC_CD]"
+                                            + quizData.get(j).getTopic_cd()
+                                            + "[/TOPIC_CD]"
+                                            + "[QUESTION_CD]"
+                                            + quizData.get(j).getQuestion_cd()
+                                            + "[/QUESTION_CD]"
+                                            + "[ANSWER_CD]"
+                                            + quizData.get(j).getAnswer_cd()
+                                            + "[/ANSWER_CD]"
+                                            + "[TRAINING_MODE_CD]"
+                                            + quizData.get(j).getTraining_mode_cd()
+                                            + "[/TRAINING_MODE_CD]"
+                                            + "[isd_image]"
+                                            + quizData.get(j).getKey_isd_image()
+                                            + "[/isd_image]"
+                                            + "[/QUIZ_DATA]";
+
+                                    final_xml = final_xml + onXML;
+                                }
+
+                            }
+
+                            final String sos_xml = "[DATA]" + final_xml + "[/DATA]";
+                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
+                            request.addProperty("XMLDATA", sos_xml);
+                            request.addProperty("KEYS", "QUIZ_DATA_NEW");
+                            request.addProperty("USERNAME", username);
+                            request.addProperty("MID", mid);
+                            envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                            envelope.dotNet = true;
+                            envelope.setOutputSoapObject(request);
+                            androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                            androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML, envelope);
+                            result = (Object) envelope.getResponse();
+                            if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            data.value = 70;
+                            data.name = "QUIZ DATA NEW";
+                            publishProgress(data);
+                        }
+
+
+                        //		uploading ISD SKILLLLL DATA
+                        final_xml = "";
+                        onXML = "";
+                        database.open();
+                        auditData = database.getAuditInsertedData(coverageBeanlist.get(i).getStoreId());
+
+                        if (auditData.size() > 0) {
+
+                            for (int j = 0; j < auditData.size(); j++) {
+
+
+                                onXML = "[AUDIT_DATA][ISD_CD]"
+                                        + auditData.get(j).getIsd_cd()
+                                        + "[/ISD_CD]"
+                                        + "[MID]"
+                                        + mid
+                                        + "[/MID]"
+                                        + "[CREATED_BY]"
+                                        + username
+                                        + "[/CREATED_BY]"
+                                        + "[CHECKLIST_CD]"
+                                        + auditData.get(j).getCHECKLIST_CD().get(0)
+                                        + "[/CHECKLIST_CD]"
+                                        + "[AVAILABILITY]"
+                                        + auditData.get(j).getAvailability()
+                                        + "[/AVAILABILITY]"
+                                        + "[/AUDIT_DATA]";
+
+                                final_xml = final_xml + onXML;
+
+                            }
+                            final String audit_xml = "[DATA]" + final_xml + "[/DATA]";
+                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
+                            request.addProperty("XMLDATA", audit_xml);
+                            request.addProperty("KEYS", "AUDIT_DATA");
+                            request.addProperty("USERNAME", username);
+                            request.addProperty("MID", mid);
+                            envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                            envelope.dotNet = true;
+                            envelope.setOutputSoapObject(request);
+                            androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                            androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML, envelope);
+                            result = (Object) envelope.getResponse();
+                            if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            data.value = 75;
+                            data.name = "AUDIT DATA";
+                            publishProgress(data);
+                        }
+
+
+                        //		uploading New Employee data
+                        final_xml = "";
+                        onXML = "";
+                        database.open();
+                        newEmpMannagedZeroData = database.getNewEmployeeForManagedZeroInsertedData(coverageBeanlist.get(i).getStoreId());
+                        if (newEmpMannagedZeroData.size() > 0) {
+                            for (int j = 0; j < newEmpMannagedZeroData.size(); j++) {
+                                String isIsd;
+                                if (newEmpMannagedZeroData.get(j).isIsd()) {
+                                    isIsd = "1";
+                                } else {
+                                    isIsd = "0";
+                                }
+                                onXML = "[NEW_EMPLOYEE_MANAGED_ZERO_DATA][ISD_CD]"
+                                        + "0"
+                                        + "[/ISD_CD]"
+                                        + "[MID]"
+                                        + mid
+                                        + "[/MID]"
+                                        + "[CREATED_BY]"
+                                        + username
+                                        + "[/CREATED_BY]"
+                                        + "[NAME]"
+                                        + newEmpMannagedZeroData.get(j).getName()
+                                        + "[/NAME]"
+                                        + "[EMAIL]"
+                                        + newEmpMannagedZeroData.get(j).getEmail()
+                                        + "[/EMAIL]"
+                                        + "[PHONE_NO]"
+                                        + newEmpMannagedZeroData.get(j).getPhone()
+                                        + "[/PHONE_NO]"
+                                        + "[IMAGE]"
+                                        + newEmpMannagedZeroData.get(j).getImage()
+                                        + "[/IMAGE]"
+                                        + "[MANAGED]"
+                                        + newEmpMannagedZeroData.get(j).getManneged()
+                                        + "[/MANAGED]"
+                                        + "[IS_ISD]"
+                                        + isIsd
+                                        + "[/IS_ISD]"
+                                        + "[/NEW_EMPLOYEE_MANAGED_ZERO_DATA]";
+
+                                final_xml = final_xml + onXML;
+
+                            }
+
+                            final String employee_xml = "[DATA]" + final_xml + "[/DATA]";
+                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
+                            request.addProperty("XMLDATA", employee_xml);
+                            request.addProperty("KEYS", "NEW_EMPLOYEE_MANAGED_ZERO_DATA");
+                            request.addProperty("USERNAME", username);
+                            request.addProperty("MID", mid);
+                            envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                            envelope.dotNet = true;
+                            envelope.setOutputSoapObject(request);
+                            androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                            androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML, envelope);
+                            result = (Object) envelope.getResponse();
+                            if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            data.value = 80;
+                            data.name = "NEW EMPLOYEE MANAGED ZERO DATA";
+                            publishProgress(data);
+                        }
+
+
+                        //		uploading TRAINING_TOPIC_DATA
+                        final_xml = "";
+                        onXML = "";
+                        database.open();
+                        trainingTopicList = database.getTrainningTopicData(coverageBeanlist.get(i).getStoreId());
+                        if (trainingTopicList.size() > 0) {
+
+                            for (int j = 0; j < trainingTopicList.size(); j++) {
+
+                                onXML = "[TRAINING_TOPIC_DATA][ISD_CD]"
+                                        + trainingTopicList.get(j).getIsd_cd()
+                                        + "[/ISD_CD]"
+                                        + "[MID]"
+                                        + mid
+                                        + "[/MID]"
+                                        + "[CREATED_BY]"
+                                        + username
+                                        + "[/CREATED_BY]"
+                                        + "[KEY_ID]"
+                                        + trainingTopicList.get(j).getKey_id()
+                                        + "[/KEY_ID]"
+                                        + "[TOPIC_CD]"
+                                        + trainingTopicList.get(j).getTOPIC_CD().get(0)
+                                        + "[/TOPIC_CD]"
+                                        + "[VISIT_DATE]"
+                                        + coverageBeanlist.get(i).getVisitDate()
+                                        + "[/VISIT_DATE]"
+                                        + "[/TRAINING_TOPIC_DATA]";
+
+                                final_xml = final_xml + onXML;
+
+                            }
+
+                            final String audit_xml = "[DATA]" + final_xml + "[/DATA]";
+
+                            request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
+                            request.addProperty("XMLDATA", audit_xml);
+                            request.addProperty("KEYS", "TRAINING_TOPIC_DATA");
+                            request.addProperty("USERNAME", username);
+                            request.addProperty("MID", mid);
+                            envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                            envelope.dotNet = true;
+                            envelope.setOutputSoapObject(request);
+                            androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                            androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML,
+                                    envelope);
+                            result = (Object) envelope.getResponse();
+                            if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+                            if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
+                                return CommonString.METHOD_UPLOAD_XML;
+                            }
+
+                            data.value = 85;
+                            data.name = "TRAINING TOPIC DATA";
+                            publishProgress(data);
+
+                        }
+
+
+                        database.open();
                         geodata = database.getGeotaggingData(coverageBeanlist.get(i).getStoreId());
                         if (geodata.size() > 0) {
                             final_xml = "";
@@ -764,10 +899,71 @@ public class CheckoutNUpload extends Activity{
                                 result = (Object) envelope.getResponse();
                                 if (result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
                                 }
+                            }
+                            data.value = 89;
+                            data.name = "GeoXML DATA";
+                            publishProgress(data);
+                        }
 
 
+                        ///uploading SALES_TEAM_TRAINEE_DATA
+                        final_xml = "";
+                        onXML = "";
+                        database.open();
+                        traineCDataList = database.getSALETEAMTRaineeInsertedDATA(coverageBeanlist.get(i).getVisitDate());
+                        if (traineCDataList.size() > 0) {
+                            boolean status = false;
+                            for (int j = 0; j < traineCDataList.size(); j++) {
+                                if (traineCDataList.get(j).getStaus().equalsIgnoreCase("N")) {
+                                    status = true;
+                                    onXML = "[SALES_TEAM_TRAINEE_DATA][SALES_TEAM_TRAINEE_CD]"
+                                            + traineCDataList.get(j).getTrainee_cd()
+                                            + "[/SALES_TEAM_TRAINEE_CD]"
+                                            + "[CREATED_BY]"
+                                            + username
+                                            + "[/CREATED_BY]"
+                                            + "[TOPIC_CD]"
+                                            + traineCDataList.get(j).getTOPIC_CD().get(0)
+                                            + "[/TOPIC_CD]"
+                                            + "[VISIT_DATE]"
+                                            + coverageBeanlist.get(i).getVisitDate()
+                                            + "[/VISIT_DATE]"
+                                            + "[MID]"
+                                            + "0"
+                                            + "[/MID]"
+                                            + "[/SALES_TEAM_TRAINEE_DATA]";
+                                    final_xml = final_xml + onXML;
+                                }
+                            }
+
+                            if (status) {
+                                final String audit_xml = "[DATA]" + final_xml + "[/DATA]";
+                                request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
+                                request.addProperty("XMLDATA", audit_xml);
+                                request.addProperty("KEYS", "SALES_TEAM_TRAINEE_DATA");
+                                request.addProperty("USERNAME", username);
+                                request.addProperty("MID", "0");
+                                envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                                envelope.dotNet = true;
+                                envelope.setOutputSoapObject(request);
+                                androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                                androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML, envelope);
+                                result = (Object) envelope.getResponse();
+                                if (result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                    database.updateSaleTeamTraineeStatus(coverageBeanlist.get(i).getVisitDate(), CommonString.KEY_U);
+                                }
+                                if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
+                                    return CommonString.METHOD_UPLOAD_XML;
+                                }
+                                if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
+                                    return CommonString.METHOD_UPLOAD_XML;
+                                }
+                                data.value = 90;
+                                data.name = "SALES_TEAM_TRAINEE_DATA";
+                                publishProgress(data);
                             }
                         }
+
 
                         if (geodata.size() > 0) {
                             for (int k = 0; k < geodata.size(); k++) {
@@ -787,11 +983,10 @@ public class CheckoutNUpload extends Activity{
 
                                 }
                             }
-                            data.value = 85;
+                            data.value = 92;
                             data.name = "GeoTagImages";
                             publishProgress(data);
                         }
-
 
 
                         //Uploading store Images
@@ -801,75 +996,104 @@ public class CheckoutNUpload extends Activity{
                                 if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
                                     return "StoreImages";
                                 }
-
                                 runOnUiThread(new Runnable() {
 
                                     public void run() {
-
                                         message.setText("Store Image Uploaded");
                                     }
                                 });
-
+                                data.value = 94;
+                                data.name = "StoreImages";
+                                publishProgress(data);
                             }
                         }
 
                         //Quiz images upload
+                        database.open();
                         quizData = database.getQuizData(coverageBeanlist.get(i).getStoreId());
-
-                        for(int j=0;j<quizData.size();j++){
-                            if (quizData.get(j).getKey_isd_image() != null && !quizData.get(j).getKey_isd_image().equals("")) {
-                                if (new File(CommonString.FILE_PATH + quizData.get(j).getKey_isd_image()).exists()) {
-                                    result = UploadImage(quizData.get(j).getKey_isd_image(), "StoreImages");
-                                    if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-                                        return "Quiz Image Uploaded";
-                                    }
-                                    if (result.toString().trim().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
-                                        return "Error" + "," + errormsg;
-                                    }
-                                    runOnUiThread(new Runnable() {
-
-                                        public void run() {
-                                            message.setText("Quiz Image Uploaded");
+                        if (quizData.size() > 0)
+                            for (int j = 0; j < quizData.size(); j++) {
+                                if (quizData.get(j).getKey_isd_image() != null && !quizData.get(j).getKey_isd_image().equals("")) {
+                                    if (new File(CommonString.FILE_PATH + quizData.get(j).getKey_isd_image()).exists()) {
+                                        result = UploadImage(quizData.get(j).getKey_isd_image(), "StoreImages");
+                                        if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                            return "Quiz Image Uploaded";
                                         }
-                                    });
+                                        if (result.toString().trim().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
+                                            return "Error" + "," + errormsg;
+                                        }
+                                        runOnUiThread(new Runnable() {
+
+                                            public void run() {
+                                                message.setText("Quiz Image Uploaded");
+                                            }
+                                        });
+                                        data.value = 95;
+                                        data.name = "Quiz Image";
+                                        publishProgress(data);
+                                    }
                                 }
                             }
+
+
+                        //Uploading mananged Zero New employeeee Images
+
+                        if (newEmpMannagedZeroData.size() > 0) {
+                            for (int k = 0; k < newEmpMannagedZeroData.size(); k++) {
+                                if (newEmpMannagedZeroData.get(k).getImage() != null && !newEmpMannagedZeroData.get(k).getImage().equals("")) {
+                                    if (new File(CommonString.FILE_PATH + newEmpMannagedZeroData.get(k).getImage()).exists()) {
+                                        result = UploadImage(newEmpMannagedZeroData.get(k).getImage(), "StoreImages");
+                                        if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                            return "StoreImages";
+                                        }
+                                        runOnUiThread(new Runnable() {
+
+                                            public void run() {
+                                                message.setText("Store Image Uploaded");
+                                            }
+                                        });
+                                        data.value = 96;
+                                        data.name = "StoreImages";
+                                        publishProgress(data);
+                                    }
+                                }
+
+                            }
+
                         }
+
+
                         //New employee Quiz data
+                        database.open();
                         quizData = database.getQuizNewEmployeeData(coverageBeanlist.get(i).getStoreId());
-                        for(int j=0;j<quizData.size();j++){
-                            if (quizData.get(j).getKey_isd_image() != null && !quizData.get(j).getKey_isd_image().equals("")) {
-                                if (new File(CommonString.FILE_PATH + quizData.get(j).getKey_isd_image()).exists()) {
-                                    result = UploadImage(quizData.get(j).getKey_isd_image(), "StoreImages");
-                                    if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-                                        return "Quiz Image Uploaded";
-                                    }
-                                    if (result.toString().trim().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
-                                        return "Error" + "," + errormsg;
-                                    }
-                                    runOnUiThread(new Runnable() {
-
-                                        public void run() {
-                                            message.setText("Quiz Image Uploaded");
+                        if (quizData.size() > 0)
+                            for (int j = 0; j < quizData.size(); j++) {
+                                if (quizData.get(j).getKey_isd_image() != null && !quizData.get(j).getKey_isd_image().equals("")) {
+                                    if (new File(CommonString.FILE_PATH + quizData.get(j).getKey_isd_image()).exists()) {
+                                        result = UploadImage(quizData.get(j).getKey_isd_image(), "StoreImages");
+                                        if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                                            return "Quiz Image Uploaded";
                                         }
-                                    });
+                                        if (result.toString().trim().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
+                                            return "Error" + "," + errormsg;
+                                        }
+                                        runOnUiThread(new Runnable() {
+
+                                            public void run() {
+                                                message.setText("Quiz Image Uploaded");
+                                            }
+                                        });
+                                        data.value = 98;
+                                        data.name = "Quiz Image";
+                                        publishProgress(data);
+                                    }
                                 }
                             }
-                        }
-
-
                     }
 
-
-
-
-                    data.value =factor*(i+1);
-                    data.name = "Uploading";
-
+                    data.value = 100;
+                    data.name = "COVERAGE_STATUS";
                     publishProgress(data);
-
-
-
 
                     // SET COVERAGE STATUS
 
@@ -894,40 +1118,31 @@ public class CheckoutNUpload extends Activity{
                     final String sos_xml = "[DATA]" + final_xml
                             + "[/DATA]";
 
-                    SoapObject request = new SoapObject(
-                            CommonString.NAMESPACE,
-                            CommonString.MEHTOD_UPLOAD_COVERAGE_STATUS);
+                    SoapObject request = new SoapObject(CommonString.NAMESPACE, CommonString.MEHTOD_UPLOAD_COVERAGE_STATUS);
                     request.addProperty("onXML", sos_xml);
-
-
                     SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                     envelope.dotNet = true;
                     envelope.setOutputSoapObject(request);
-
                     HttpTransportSE androidHttpTransport = new HttpTransportSE(CommonString.URL);
-                    androidHttpTransport.call(CommonString.SOAP_ACTION+CommonString.MEHTOD_UPLOAD_COVERAGE_STATUS, envelope);
+                    androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.MEHTOD_UPLOAD_COVERAGE_STATUS, envelope);
                     Object result = (Object) envelope.getResponse();
-
                     if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
                         return CommonString.MEHTOD_UPLOAD_COVERAGE_STATUS;
                     }
-
                     if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
                         return CommonString.MEHTOD_UPLOAD_COVERAGE_STATUS;
                     }
-
                     if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
                         return CommonString.MEHTOD_UPLOAD_COVERAGE_STATUS;
                     }
                     database.open();
                     database.updateCoverageStatus(coverageBeanlist.get(i).getMID(), CommonString.KEY_U);
-                    database.updateStoreStatusOnLeave(coverageBeanlist.get(i).getStoreId(), coverageBeanlist.get(i).getVisitDate(), CommonString.KEY_U);
+                    database.updateStoreStatusOnLeave(coverageBeanlist.get(i).getStoreId(),
+                            coverageBeanlist.get(i).getVisitDate(), CommonString.KEY_U);
                 }
 
-
-            }
-
-            catch (MalformedURLException e) {
+            } catch (MalformedURLException e) {
+                dialog.dismiss();
                 up_success_flag = false;
                 runOnUiThread(new Runnable() {
 
@@ -939,6 +1154,7 @@ public class CheckoutNUpload extends Activity{
                 });
 
             } catch (IOException e) {
+                dialog.dismiss();
                 up_success_flag = false;
                 runOnUiThread(new Runnable() {
 
@@ -949,9 +1165,8 @@ public class CheckoutNUpload extends Activity{
                     }
                 });
 
-            }
-            catch(Exception e){
-
+            } catch (Exception e) {
+                dialog.dismiss();
                 up_success_flag = false;
 
 
@@ -965,48 +1180,34 @@ public class CheckoutNUpload extends Activity{
                 });
 
             }
-            if(	up_success_flag==true){
+            if (up_success_flag == true) {
                 return CommonString.KEY_SUCCESS;
-            }
-            else{
+            } else {
                 return CommonString.KEY_FAILURE;
             }
-
-
         }
-
         @Override
         protected void onProgressUpdate(Data... values) {
             // TODO Auto-generated method stub
-
             pb.setProgress(values[0].value);
             percentage.setText(values[0].value + "%");
             message.setText(values[0].name);
-
         }
 
         @Override
         protected void onPostExecute(String result) {
             // TODO Auto-generated method stub
             super.onPostExecute(result);
-
             dialog.dismiss();
             if (result.equals(CommonString.KEY_SUCCESS)) {
-
-
+                database.open();
                 database.deleteAllTables();
-
                 showMessage(CommonString.MESSAGE_UPLOAD_DATA);
-            } else  {
-
-                showMessage("Error in Upload :- "+" "+result);
-
+            } else {
+                showMessage("Error in Upload :- " + " " + result);
             }
-
-
         }
     }
-
 
     class Data {
         int value;
@@ -1032,7 +1233,6 @@ public class CheckoutNUpload extends Activity{
         protected void onPreExecute() {
             // TODO Auto-generated method stub
             super.onPreExecute();
-
             dialog = new Dialog(context);
             dialog.setContentView(R.layout.custom);
             dialog.setTitle("Sending Checkout Data");
@@ -1041,7 +1241,6 @@ public class CheckoutNUpload extends Activity{
             pb = (ProgressBar) dialog.findViewById(R.id.progressBar1);
             percentage = (TextView) dialog.findViewById(R.id.percentage);
             message = (TextView) dialog.findViewById(R.id.message);
-
         }
 
         @SuppressWarnings("deprecation")
@@ -1051,101 +1250,66 @@ public class CheckoutNUpload extends Activity{
 
             try {
 
-                //String result = "";
                 data = new Data();
-
                 data.value = 20;
                 data.name = "Checked out Data Uploading";
                 publishProgress(data);
+                if (coverageBean.size() > 0) {
+                    String onXML = "[STORE_CHECK_OUT_STATUS][USER_ID]"
+                            + username
+                            + "[/USER_ID]" + "[STORE_ID]"
+                            + coverageBean.get(0).getStoreId()
+                            + "[/STORE_ID][LATITUDE]"
+                            + coverageBean.get(0).getLatitude()
+                            + "[/LATITUDE][LOGITUDE]"
+                            + coverageBean.get(0).getLongitude()
+                            + "[/LOGITUDE][CHECKOUT_DATE]"
+                            + coverageBean.get(0).getVisitDate()
+                            + "[/CHECKOUT_DATE][CHECK_OUTTIME]"
+                            + getCurrentTime()
+                            + "[/CHECK_OUTTIME][CHECK_INTIME]"
+                            + coverageBean.get(0).getInTime()
+                            + "[/CHECK_INTIME][CREATED_BY]"
+                            + username
+                            + "[/CREATED_BY][/STORE_CHECK_OUT_STATUS]";
 
-
-                String onXML = "[STORE_CHECK_OUT_STATUS][USER_ID]"
-                        + username
-                        + "[/USER_ID]" + "[STORE_ID]"
-                        + store_id
-                        + "[/STORE_ID][LATITUDE]"
-                        + latitude
-                        + "[/LATITUDE][LOGITUDE]"
-                        + longitude
-                        + "[/LOGITUDE][CHECKOUT_DATE]"
-                        + visit_date
-                        + "[/CHECKOUT_DATE][CHECK_OUTTIME]"
-                        + getCurrentTime()
-                        + "[/CHECK_OUTTIME][CHECK_INTIME]"
-                        + store_intime
-                        + "[/CHECK_INTIME][CREATED_BY]"
-                        + username
-                        + "[/CREATED_BY][/STORE_CHECK_OUT_STATUS]";
-
-                final String sos_xml = "[DATA]" + onXML + "[/DATA]";
-                SoapObject request = new SoapObject(CommonString.NAMESPACE, "Upload_Store_ChecOut_Status");
-                request.addProperty("onXML", sos_xml);
-                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
-                envelope.dotNet = true;
-                envelope.setOutputSoapObject(request);
-                HttpTransportSE androidHttpTransport = new HttpTransportSE(CommonString.URL);
-                androidHttpTransport.call(CommonString.SOAP_ACTION+"Upload_Store_ChecOut_Status", envelope);
-                Object result = (Object) envelope.getResponse();
-                if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-                    return "Upload_Store_ChecOut_Status";
-                }
-
-                if (result.toString().equalsIgnoreCase(
-                        CommonString.KEY_NO_DATA)) {
-                    return "Upload_Store_ChecOut_Status";
-                }
-                // for failure
-                if (result.toString().equalsIgnoreCase(
-                        CommonString.KEY_FAILURE)) {
-                    return "Upload_Store_ChecOut_Status";
-                }
-
-
-                data.value = 100;
-                data.name = "Checkout Done";
-                publishProgress(data);
-
-                if (result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-
-                    database.updateCoverageStoreOutTime(store_id, visit_date, getCurrentTime(), CommonString.KEY_C);
-
-                    SharedPreferences.Editor editor = preferences.edit();
-                    editor.putString(CommonString.KEY_STORE_CD, "");
-                    editor.commit();
-
-                    database.updateStoreStatusOnCheckout(store_id, visit_date,
-                            CommonString.KEY_C);
-
-                } else {
-                    if (result.toString().equalsIgnoreCase(
-                            CommonString.KEY_FALSE)) {
+                    final String sos_xml = "[DATA]" + onXML + "[/DATA]";
+                    SoapObject request = new SoapObject(CommonString.NAMESPACE, "Upload_Store_ChecOut_Status");
+                    request.addProperty("onXML", sos_xml);
+                    SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                    envelope.dotNet = true;
+                    envelope.setOutputSoapObject(request);
+                    HttpTransportSE androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                    androidHttpTransport.call(CommonString.SOAP_ACTION + "Upload_Store_ChecOut_Status", envelope);
+                    Object result = (Object) envelope.getResponse();
+                    if (result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
+                        database.updateCoverageStoreOutTime(coverageBean.get(0).getStoreId(), coverageBean.get(0).getVisitDate(), coverageBean.get(0).getInTime(), CommonString.KEY_C);
+                        database.updateStoreStatusOnCheckout(coverageBean.get(0).getStoreId(), coverageBean.get(0).getVisitDate(), CommonString.KEY_C);
+                        SharedPreferences.Editor editor = preferences.edit();
+                        editor.putString(CommonString.KEY_STORE_CD, "");
+                        editor.commit();
+                        data.value = 100;
+                        data.name = "Checkout Done";
+                        publishProgress(data);
+                        return CommonString.KEY_SUCCESS;
+                    } else {
                         return "Upload_Store_ChecOut_Status";
                     }
-
-                    // for failure
-
                 }
-                return CommonString.KEY_SUCCESS;
-
             } catch (MalformedURLException e) {
-
                 runOnUiThread(new Runnable() {
 
                     @Override
                     public void run() {
                         // TODO Auto-generated method stub
-
                         showMessage(CommonString.MESSAGE_EXCEPTION);
                     }
                 });
-
             } catch (IOException e) {
-
                 runOnUiThread(new Runnable() {
 
                     @Override
                     public void run() {
-
                         showMessage(CommonString.MESSAGE_SOCKETEXCEPTION);
                         // TODO Auto-generated method stub
                     }
@@ -1160,27 +1324,22 @@ public class CheckoutNUpload extends Activity{
                     }
                 });
             }
-
             return "";
         }
 
         @Override
         protected void onProgressUpdate(Data... values) {
             // TODO Auto-generated method stub
-
             pb.setProgress(values[0].value);
             percentage.setText(values[0].value + "%");
             message.setText(values[0].name);
-
         }
 
         @Override
         protected void onPostExecute(String result) {
             // TODO Auto-generated method stub
             super.onPostExecute(result);
-
             dialog.dismiss();
-
             if (result.equals(CommonString.KEY_SUCCESS)) {
                 new UploadDataTask(CheckoutNUpload.this).execute();
             } else if (!result.equals("")) {

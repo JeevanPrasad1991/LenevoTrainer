@@ -48,33 +48,33 @@
 
             </RelativeLayout>
 
-           <RelativeLayout
-               android:id="@+id/layout_camera"
-               android:layout_width="match_parent"
-               android:layout_height="wrap_content"
-               android:layout_marginTop="10dp"
-               android:orientation="horizontal">
+            <RelativeLayout
+                android:id="@+id/layout_camera"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
 
-               <TextView
-                   android:layout_width="wrap_content"
-                   android:layout_height="wrap_content"
-                   android:text="Image"
-                   android:layout_marginTop="20dp"
-                   android:layout_marginLeft="10dp"
-                   android:padding="10dp"
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="Image"
+                    android:layout_marginTop="20dp"
+                    android:layout_marginLeft="10dp"
+                    android:padding="10dp"
 
-                   android:textColor="@color/colorPrimary"
-                   android:textSize="18dp"/>
-               <ImageView
-                   android:id="@+id/isd_image"
-                   android:layout_width="60dp"
-                   android:layout_height="60dp"
-                   android:layout_marginTop="10dp"
-                   android:layout_alignParentRight="true"
-                   android:layout_marginRight="3dp"
-                   android:background="@drawable/camera_icon"
-                   />
-           </RelativeLayout>
+                    android:textColor="@color/colorPrimary"
+                    android:textSize="18dp"/>
+                <ImageView
+                    android:id="@+id/isd_image"
+                    android:layout_width="60dp"
+                    android:layout_height="60dp"
+                    android:layout_marginTop="10dp"
+                    android:layout_alignParentRight="true"
+                    android:layout_marginRight="3dp"
+                    android:background="@drawable/camera_icon"
+                    />
+            </RelativeLayout>
 
             <RelativeLayout
                 android:id="@+id/layout_next"

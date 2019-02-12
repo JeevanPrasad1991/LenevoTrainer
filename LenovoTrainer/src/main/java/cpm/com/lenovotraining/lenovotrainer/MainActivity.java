@@ -40,6 +40,7 @@ import java.util.List;
 
 import cpm.com.lenovotraining.R;
 import cpm.com.lenovotraining.constants.CommonString;
+import cpm.com.lenovotraining.dailyentry.SaleTeamTrainingActivity;
 import cpm.com.lenovotraining.dailyentry.StoreListActivity;
 import cpm.com.lenovotraining.database.Database;
 import cpm.com.lenovotraining.download.CompleteDownloadActivity;
@@ -54,13 +55,14 @@ import cpm.com.lenovotraining.xmlgettersetter.TrainingTopicGetterSetter;
 public class MainActivity extends AppCompatActivity
         implements NavigationView.OnNavigationItemSelectedListener {
 
-    private SharedPreferences preferences=null;
-    private String user_name,user_type,visit_date;
+    private SharedPreferences preferences = null;
+    private String user_name, user_type, visit_date;
 
     Database db;
-    ArrayList<PosmGetterSetter> posmlist = new ArrayList<>();;
-    ArrayList<TrainingTopicGetterSetter> storetypelist=new ArrayList<>();
-    ArrayList<CoverageBean> coverageList=new ArrayList<>();
+    ArrayList<PosmGetterSetter> posmlist = new ArrayList<>();
+    ;
+    ArrayList<TrainingTopicGetterSetter> storetypelist = new ArrayList<>();
+    ArrayList<CoverageBean> coverageList = new ArrayList<>();
 
     //FloatingActionButton fab;
 
@@ -82,7 +84,6 @@ public class MainActivity extends AppCompatActivity
         setContentView(R.layout.activity_main);
         Toolbar toolbar = (Toolbar) findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
-
         img_logo = (ImageView) findViewById(R.id.img_logo);
         rec_store_data = (RecyclerView) findViewById(R.id.rec_store_data);
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
@@ -92,7 +93,6 @@ public class MainActivity extends AppCompatActivity
         db = new Database(getApplicationContext());
         db.open();
         str = CommonString.FILE_PATH;
-
         DrawerLayout drawer = (DrawerLayout) findViewById(R.id.drawer_layout);
         ActionBarDrawerToggle toggle = new ActionBarDrawerToggle(this, drawer, toolbar, R.string.navigation_drawer_open, R.string.navigation_drawer_close);
         drawer.setDrawerListener(toggle);
@@ -104,7 +104,7 @@ public class MainActivity extends AppCompatActivity
         View headerView = LayoutInflater.from(this).inflate(R.layout.nav_header_layout, navigationView, false);
         navigationView.addHeaderView(headerView);
 
-        TextView tv_username = (TextView)  headerView.findViewById(R.id.nav_user_name);
+        TextView tv_username = (TextView) headerView.findViewById(R.id.nav_user_name);
         TextView tv_usertype = (TextView) headerView.findViewById(R.id.nav_user_type);
 
         tv_username.setText(user_name);
@@ -138,9 +138,9 @@ public class MainActivity extends AppCompatActivity
         // Handle navigation view item clicks here.
         int id = item.getItemId();
         if (id == R.id.nav_daily_entry) {
-        Intent in = new Intent(getApplicationContext(), StoreListActivity.class);
-        startActivity(in);
-        }else if (id == R.id.nav_download) {
+            Intent in = new Intent(getApplicationContext(), StoreListActivity.class);
+            startActivity(in);
+        } else if (id == R.id.nav_download) {
 
             // Download data
 
@@ -150,7 +150,7 @@ public class MainActivity extends AppCompatActivity
 
                     if (msg.what != 1) { // code if not connected
 
-                        Snackbar.make(rec_store_data, CommonString.NO_INTERNET_CONNECTION,Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rec_store_data, CommonString.NO_INTERNET_CONNECTION, Snackbar.LENGTH_SHORT).show();
 
                     } else { // code if connected
                         if (db.isCoverageDataFilled(visit_date)) {
@@ -160,7 +160,6 @@ public class MainActivity extends AppCompatActivity
                                     .setCancelable(false)
                                     .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                         public void onClick(DialogInterface dialog, int id) {
-
                                             Intent startUpload = new Intent(MainActivity.this, CheckoutNUpload.class);
                                             startActivity(startUpload);
                                             finish();
@@ -172,89 +171,86 @@ public class MainActivity extends AppCompatActivity
 
                             alert.show();
 
-                        }
-                        else{
+                        } else {
+                            try {
+                                db.open();
+                                db.deletePreviousUploadedData(visit_date);
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
 
-                            Intent startDownload = 	new Intent(getApplicationContext(),CompleteDownloadActivity.class);
+                            Intent startDownload = new Intent(getApplicationContext(), CompleteDownloadActivity.class);
                             startActivity(startDownload);
                         }
 
                     }
                 }
             };
-
             isNetworkAvailable(h, 5000);
 
         } else if (id == R.id.nav_upload) {
             //Upload data
-            jcplist=db.getStoreData(visit_date);
+            boolean flag = true;
+            jcplist = db.getStoreData(visit_date);
             if (jcplist.size() == 0) {
-
-                Snackbar.make(rec_store_data, "Please Download Data First", Snackbar.LENGTH_SHORT)
-                        .setAction("Action", null).show();
-
+                Snackbar.make(rec_store_data, "Please Download Data First", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
             } else {
-                  String store=preferences.getString(CommonString.KEY_STORE_CD, "");
-                Log.d("store",store);
-                if(!preferences.getString(CommonString.KEY_STORE_CD, "").equals("")){
-                    Snackbar.make(rec_store_data, "First checkout of store", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
-
-                }
-                else{
-                    coveragedata = db.getCoverageData(visit_date);
-                    if (coveragedata.size() == 0) {
-                        Snackbar.make(rec_store_data, CommonString.MESSAGE_NO_DATA, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
-
-                    } else {
-
-
+                db.open();
+                coveragedata = db.getCoverageData(visit_date);
+                if (coveragedata.size() > 0) {
+                    for (int i = 0; i < coveragedata.size(); i++) {
+                        if (coveragedata.get(i).getStatus().equalsIgnoreCase(CommonString.KEY_VALID)
+                                || coveragedata.get(i).getStatus().equalsIgnoreCase(CommonString.KEY_INVALID)) {
+                            Snackbar.make(rec_store_data, "First checkout of store", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
+                            flag = false;
+                            break;
+                        }
+                    }
+                    if (flag) {
                         if ((validate_data(coveragedata))) {
-
                             Handler h = new Handler() {
                                 @Override
                                 public void handleMessage(Message msg) {
                                     if (msg.what != 1) { // code if not connected
-                                        Snackbar.make(rec_store_data, CommonString.NO_INTERNET_CONNECTION,Snackbar.LENGTH_SHORT).show();
+                                        Snackbar.make(rec_store_data, CommonString.NO_INTERNET_CONNECTION, Snackbar.LENGTH_SHORT).show();
                                     } else {
-                                        Intent startUpload = 	new Intent(getApplicationContext(),UploadActivity.class);
+                                        Intent startUpload = new Intent(getApplicationContext(), UploadActivity.class);
                                         startActivity(startUpload);
                                     }
                                 }
                             };
-
-
                             isNetworkAvailable(h, 5000);
-
+                        } else {
+                            Snackbar.make(rec_store_data, CommonString.MESSAGE_NO_DATA, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
                         }
-
-                        else{
-
-                            Snackbar.make(rec_store_data, CommonString.MESSAGE_NO_DATA, Snackbar.LENGTH_SHORT)
-                                    .setAction("Action", null).show();
-                        }
-
                     }
-
+                } else {
+                    Snackbar.make(rec_store_data, CommonString.MESSAGE_NO_DATA, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
                 }
-
 
 
             }
 
-
+        } else if (id == R.id.nav_sTeam_training) {
+            jcplist = db.getStoreData(visit_date);
+            if (jcplist.size() == 0) {
+                Snackbar.make(rec_store_data, "Please Download Data First", Snackbar.LENGTH_SHORT).setAction("Action", null).show();
+            } else {
+                startActivity(new Intent(MainActivity.this, SaleTeamTrainingActivity.class));
+                overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+            }
         } else if (id == R.id.nav_exit) {
             //Exit to login
-            Intent startDownload = 	new Intent(this,LoginActivity.class);
+            Intent startDownload = new Intent(this, LoginActivity.class);
             startActivity(startDownload);
             finish();
 
         } else if (id == R.id.nav_help) {
             //Open Help Fragment
-            Intent startDownload = 	new Intent(this,HelpActivity.class);
+            Intent startDownload = new Intent(this, HelpActivity.class);
             startActivity(startDownload);
-
             overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-        }else if (id == R.id.nav_export_database) {
+        } else if (id == R.id.nav_export_database) {
 
             AlertDialog.Builder builder1 = new AlertDialog.Builder(
                     MainActivity.this);
@@ -278,12 +274,11 @@ public class MainActivity extends AppCompatActivity
                                             long date = System.currentTimeMillis();
                                             SimpleDateFormat sdf = new SimpleDateFormat("MMM/dd/yy");
                                             String dateString = sdf.format(date);
-                                            String currentDBPath = "//data//cpm.com.lenovotrainer//databases//"+Database.DATABASE_NAME;
-                                            // String currentDBPath = "//data//com.cpm.pillsbury//databases//PILLSBURY_DATABASE";
+                                            String currentDBPath = "//data//cpm.com.lenovotrainer//databases//" + Database.DATABASE_NAME;
                                             String backupDBPath = "LenovoTrainer_backup" + dateString.replace('/', '-');
                                             File currentDB = new File(data, currentDBPath);
                                             File backupDB = new File("/mnt/sdcard/LenovoTrainer_backup/", backupDBPath);
-                                            Snackbar.make(rec_store_data,"Database Exported Successfully",Snackbar.LENGTH_SHORT).show();
+                                            Snackbar.make(rec_store_data, "Database Exported Successfully", Snackbar.LENGTH_SHORT).show();
                                             if (currentDB.exists()) {
                                                 FileChannel src = new FileInputStream(currentDB).getChannel();
                                                 FileChannel dst = new FileOutputStream(backupDB).getChannel();
@@ -341,7 +336,6 @@ public class MainActivity extends AppCompatActivity
             holder.tv_store_type.setText(mValues.get(position).getSTORETYPE().get(0));
 
 
-
             if (mValues.get(position).getTRAINING_MODE().get(0).equalsIgnoreCase("Remote")) {
                 holder.img_tick.setVisibility(View.VISIBLE);
             } else {
@@ -360,7 +354,7 @@ public class MainActivity extends AppCompatActivity
             public final TextView tv_store_name;
             public final TextView tv_city;
             public final TextView tv_store_type;
-           // public final ImageView img_store;
+            // public final ImageView img_store;
             public final ImageView img_tick;
             public JCPGetterSetter mItem;
 
@@ -386,6 +380,7 @@ public class MainActivity extends AppCompatActivity
 
         new Thread() {
             private boolean responded = false;
+
             @Override
             public void run() {
                 // set 'responded' to TRUE if is able to connect with google mobile (responds fast)
@@ -396,25 +391,27 @@ public class MainActivity extends AppCompatActivity
                         try {
                             new DefaultHttpClient().execute(requestForTest); // can last...
                             responded = true;
-                        }
-                        catch (Exception e) {
+                        } catch (Exception e) {
                         }
                     }
                 }.start();
 
                 try {
                     int waited = 0;
-                    while(!responded && (waited < timeout)) {
+                    while (!responded && (waited < timeout)) {
                         sleep(100);
-                        if(!responded ) {
+                        if (!responded) {
                             waited += 100;
                         }
                     }
-                }
-                catch(InterruptedException e) {} // do nothing
+                } catch (InterruptedException e) {
+                } // do nothing
                 finally {
-                    if (!responded) { handler.sendEmptyMessage(0); }
-                    else { handler.sendEmptyMessage(1); }
+                    if (!responded) {
+                        handler.sendEmptyMessage(0);
+                    } else {
+                        handler.sendEmptyMessage(1);
+                    }
                 }
             }
         }.start();
@@ -422,17 +419,15 @@ public class MainActivity extends AppCompatActivity
 
     public boolean validate_data(ArrayList<CoverageBean> cdata) {
         boolean result = false;
-
         for (int i = 0; i < cdata.size(); i++) {
-
             storestatus = db.getStoreStatus(cdata.get(i).getStoreId());
-
             if (!storestatus.getUPLOAD_STATUS().get(0).equalsIgnoreCase(CommonString.KEY_U)) {
                 if ((storestatus.getCHECKOUT_STATUS().get(0).equalsIgnoreCase(
                         CommonString.KEY_C)
                         || storestatus.getUPLOAD_STATUS().get(0).equalsIgnoreCase(
                         CommonString.KEY_P) || storestatus.getUPLOAD_STATUS().get(0)
-                        .equalsIgnoreCase(CommonString.STORE_STATUS_LEAVE))) {
+                        .equalsIgnoreCase(CommonString.STORE_STATUS_LEAVE)) || storestatus.getCHECKOUT_STATUS().get(0).equalsIgnoreCase(
+                        CommonString.STORE_STATUS_LEAVE)) {
                     result = true;
                     break;
 

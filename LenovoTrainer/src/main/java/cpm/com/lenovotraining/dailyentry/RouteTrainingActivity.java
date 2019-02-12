@@ -48,13 +48,6 @@ public class RouteTrainingActivity extends AppCompatActivity {
         setSupportActionBar(toolbar);
         getSupportActionBar().setHomeButtonEnabled(true);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
-        // training_mode_cd = getIntent().getStringExtra(CommonString.KEY_TRAINING_MODE_CD);
-        // manned = getIntent().getStringExtra(CommonString.KEY_MANAGED);
-        preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        store_cd = preferences.getString(CommonString.KEY_STORE_CD, null);
-        visit_date = preferences.getString(CommonString.KEY_DATE, null);
-        training_mode_cd = preferences.getString(CommonString.KEY_TRAINING_MODE_CD, null);
-        manned = preferences.getString(CommonString.KEY_MANAGED, null);
         database = new Database(this);
         database.open();
     }
@@ -62,10 +55,15 @@ public class RouteTrainingActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
+        store_cd = preferences.getString(CommonString.KEY_STORE_CD, "");
+        visit_date = preferences.getString(CommonString.KEY_DATE, "");
+        training_mode_cd = preferences.getString(CommonString.KEY_TRAINING_MODE_CD, "");
+        manned = preferences.getString(CommonString.KEY_MANAGED, "");
+        setTitle("Route Training - " + visit_date);
         database.open();
         jcpspecific = database.getSpecificStoreData(store_cd);
         geodata = database.getGeotaggingData(store_cd);
-
         recyclerView = (RecyclerView) findViewById(R.id.rec_menu);
         List<NavMenuGetterSetter> data = new ArrayList<>();
         NavMenuGetterSetter recData = new NavMenuGetterSetter();
@@ -76,22 +74,10 @@ public class RouteTrainingActivity extends AppCompatActivity {
             recData.setIconImg(R.drawable.performance_ico);
             data.add(recData);
         } else {
-            if (geodata.size() > 0) {
-                if (geodata.get(0).getGEO_TAG().equals("Y")) {
-                    recData.setIconImg(R.drawable.route_training_icon);
-                    data.add(recData);
-                    recData = new NavMenuGetterSetter();
-                    recData.setIconImg(R.drawable.performance_ico);
-                    data.add(recData);
-                    recData = new NavMenuGetterSetter();
-                    recData.setIconImg(R.drawable.geo_tag_done);
-                    data.add(recData);
-                }
-            }
-            if (jcpspecific.size() > 0) {
-                if (jcpspecific.get(0).getGEOTAG().get(0).equals("Y")) {
+            if (manned.equals("0")) {
+                if (jcpspecific.get(0).getGEOTAG().get(0).equals("Y") && database.IsManagedZero(store_cd)) {
                     data.clear();
-                    recData.setIconImg(R.drawable.route_training_icon);
+                    recData.setIconImg(R.drawable.route_training_done);
                     data.add(recData);
                     recData = new NavMenuGetterSetter();
                     recData.setIconImg(R.drawable.performance_ico);
@@ -99,21 +85,7 @@ public class RouteTrainingActivity extends AppCompatActivity {
                     recData = new NavMenuGetterSetter();
                     recData.setIconImg(R.drawable.geo_tag_done);
                     data.add(recData);
-                }
-            }
-            if (database.isPOSMDataFilled(store_cd)) {
-                data.clear();
-                recData.setIconImg(R.drawable.route_training_done);
-                data.add(recData);
-                recData = new NavMenuGetterSetter();
-                recData.setIconImg(R.drawable.performance_ico);
-                data.add(recData);
-                recData = new NavMenuGetterSetter();
-                recData.setIconImg(R.drawable.geo_tag_icon);
-                data.add(recData);
-            }
-            if (database.isPOSMDataFilled(store_cd)) {
-                if (geodata.size() > 0) {
+                } else if (database.IsManagedZero(store_cd) && geodata.size() > 0) {
                     if (geodata.get(0).getGEO_TAG().equals("Y") && jcpspecific.get(0).getGEOTAG().get(0).equals("Y")) {
                         data.clear();
                         recData.setIconImg(R.drawable.route_training_done);
@@ -125,17 +97,115 @@ public class RouteTrainingActivity extends AppCompatActivity {
                         recData.setIconImg(R.drawable.geo_tag_done);
                         data.add(recData);
                     }
+                } else if (jcpspecific.get(0).getGEOTAG().get(0).equals("Y")) {
+                    data.clear();
+                    recData.setIconImg(R.drawable.route_training_icon);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.performance_ico);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.geo_tag_done);
+                    data.add(recData);
+                } else if (geodata.size() > 0) {
+                    if (geodata.get(0).getGEO_TAG().equals("Y")) {
+                        recData.setIconImg(R.drawable.route_training_icon);
+                        data.add(recData);
+                        recData = new NavMenuGetterSetter();
+                        recData.setIconImg(R.drawable.performance_ico);
+                        data.add(recData);
+                        recData = new NavMenuGetterSetter();
+                        recData.setIconImg(R.drawable.geo_tag_done);
+                        data.add(recData);
+                    }
+
+                } else if (database.IsManagedZero(store_cd)) {
+                    data.clear();
+                    recData.setIconImg(R.drawable.route_training_done);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.performance_ico);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.geo_tag_icon);
+                    data.add(recData);
+                } else {
+                    data.clear();
+                    recData.setIconImg(R.drawable.route_training_icon);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.performance_ico);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.geo_tag_icon);
+                    data.add(recData);
                 }
             } else {
-                data.clear();
-                recData.setIconImg(R.drawable.route_training_icon);
-                data.add(recData);
-                recData = new NavMenuGetterSetter();
-                recData.setIconImg(R.drawable.performance_ico);
-                data.add(recData);
-                recData = new NavMenuGetterSetter();
-                recData.setIconImg(R.drawable.geotag);
-                data.add(recData);
+                if (jcpspecific.get(0).getGEOTAG().get(0).equals("Y") && database.isPOSMDataFilled(store_cd)) {
+                    data.clear();
+                    recData.setIconImg(R.drawable.route_training_done);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.performance_ico);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.geo_tag_done);
+                    data.add(recData);
+                } else if (database.isPOSMDataFilled(store_cd) && geodata.size() > 0) {
+                    if (geodata.get(0).getGEO_TAG().equals("Y") && jcpspecific.get(0).getGEOTAG().get(0).equals("Y")) {
+                        data.clear();
+                        recData.setIconImg(R.drawable.route_training_done);
+                        data.add(recData);
+                        recData = new NavMenuGetterSetter();
+                        recData.setIconImg(R.drawable.performance_ico);
+                        data.add(recData);
+                        recData = new NavMenuGetterSetter();
+                        recData.setIconImg(R.drawable.geo_tag_done);
+                        data.add(recData);
+                    }
+                } else if (jcpspecific.get(0).getGEOTAG().get(0).equals("Y")) {
+                    data.clear();
+                    recData.setIconImg(R.drawable.route_training_icon);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.performance_ico);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.geo_tag_done);
+                    data.add(recData);
+                } else if (geodata.size() > 0) {
+                    if (geodata.get(0).getGEO_TAG().equals("Y")) {
+                        recData.setIconImg(R.drawable.route_training_icon);
+                        data.add(recData);
+                        recData = new NavMenuGetterSetter();
+                        recData.setIconImg(R.drawable.performance_ico);
+                        data.add(recData);
+                        recData = new NavMenuGetterSetter();
+                        recData.setIconImg(R.drawable.geo_tag_done);
+                        data.add(recData);
+                    }
+
+                } else if (database.isPOSMDataFilled(store_cd)) {
+                    data.clear();
+                    recData.setIconImg(R.drawable.route_training_done);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.performance_ico);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.geo_tag_icon);
+                    data.add(recData);
+                } else {
+                    data.clear();
+                    recData.setIconImg(R.drawable.route_training_icon);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.performance_ico);
+                    data.add(recData);
+                    recData = new NavMenuGetterSetter();
+                    recData.setIconImg(R.drawable.geo_tag_icon);
+                    data.add(recData);
+                }
             }
         }
         adapter = new ValueAdapter(getApplicationContext(), data);
@@ -153,17 +223,14 @@ public class RouteTrainingActivity extends AppCompatActivity {
         public ValueAdapter(Context context, List<NavMenuGetterSetter> data) {
             inflator = LayoutInflater.from(context);
             this.data = data;
-
         }
 
         @Override
         public ValueAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent, int i) {
-
             View view = inflator.inflate(R.layout.custom_menu_row, parent, false);
-
             MyViewHolder holder = new MyViewHolder(view);
-
             return holder;
+
         }
 
         @Override
@@ -217,15 +284,15 @@ public class RouteTrainingActivity extends AppCompatActivity {
                 icon = (ImageView) itemView.findViewById(R.id.list_icon);
             }
         }
-
     }
+
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         int id = item.getItemId();
         if (id == android.R.id.home) {
-            finish();
             overridePendingTransition(R.anim.activity_back_in, R.anim.activity_back_out);
+            finish();
 
         }
         return super.onOptionsItemSelected(item);
@@ -233,26 +300,59 @@ public class RouteTrainingActivity extends AppCompatActivity {
 
     @Override
     public void onBackPressed() {
-        finish();
         overridePendingTransition(R.anim.activity_back_in, R.anim.activity_back_out);
+        finish();
     }
 
     private boolean validate() {
         boolean flag = true;
-        if (geodata.size() > 0) {
-            if (geodata.get(0).getGEO_TAG().equals("N") || jcpspecific.get(0).getGEOTAG().get(0).equals("N")) {
-                flag = false;
+        if (training_mode_cd.equals("1")) {
+            if (geodata.size() > 0) {
+                if (geodata.get(0).getGEO_TAG().equals("N") || jcpspecific.get(0).getGEOTAG().get(0).equals("N")) {
+                    flag = false;
+                }
+            } else {
+                if (jcpspecific.get(0).getGEOTAG().get(0).equals("N")) {
+                    flag = false;
+                }
+            }
+            if (manned.equals("0")) {
+                if (training_mode_cd.equals("1")) {
+                    if (flag) {
+                        if (!database.IsManagedZero(store_cd)) {
+                            flag = false;
+                        }
+                    }
+                }
+
+            } else {
+                if (flag) {
+                    if (!database.isPOSMDataFilled(store_cd)) {
+                        flag = false;
+                    }
+                }
+
             }
         } else {
-            if (jcpspecific.get(0).getGEOTAG().get(0).equals("N")) {
-                flag = false;
+            if (manned.equals("0")) {
+                if (training_mode_cd.equals("1")) {
+                    if (flag) {
+                        if (!database.IsManagedZero(store_cd)) {
+                            flag = false;
+                        }
+                    }
+                }
+
+            } else {
+                if (flag) {
+                    if (!database.isPOSMDataFilled(store_cd)) {
+                        flag = false;
+                    }
+                }
+
             }
         }
-        if (flag) {
-            if (!database.isPOSMDataFilled(store_cd)) {
-                flag = false;
-            }
-        }
+
         return flag;
     }
 

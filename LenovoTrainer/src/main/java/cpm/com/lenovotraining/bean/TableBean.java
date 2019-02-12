@@ -16,6 +16,26 @@ public class TableBean {
 
     public static String table_reason_attendance;
 
+    public static String getTable_auditchecklist_answer() {
+        return table_auditchecklist_answer;
+    }
+
+    public static void setTable_auditchecklist_answer(String table_auditchecklist_answer) {
+        TableBean.table_auditchecklist_answer = table_auditchecklist_answer;
+    }
+
+    public static String table_auditchecklist_answer;
+
+    public static String getTable_sale_team() {
+        return table_sale_team;
+    }
+
+    public static void setTable_sale_team(String table_sale_team) {
+        TableBean.table_sale_team = table_sale_team;
+    }
+
+    public static String table_sale_team;
+
     public static String getTable_jcp() {
         return table_jcp;
     }

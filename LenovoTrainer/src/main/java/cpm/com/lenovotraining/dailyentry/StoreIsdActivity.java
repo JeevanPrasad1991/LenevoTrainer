@@ -1,5 +1,6 @@
 package cpm.com.lenovotraining.dailyentry;
 
+import android.Manifest;
 import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
@@ -7,14 +8,21 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.net.Uri;
 import android.os.AsyncTask;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
 import android.preference.PreferenceManager;
 import android.provider.MediaStore;
+import android.provider.Settings;
 import android.support.design.widget.FloatingActionButton;
 import android.support.design.widget.Snackbar;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.GridLayoutManager;
@@ -44,6 +52,11 @@ import android.widget.Spinner;
 import android.widget.TextView;
 
 import com.github.clans.fab.FloatingActionMenu;
+import com.google.android.gms.common.ConnectionResult;
+import com.google.android.gms.common.GooglePlayServicesUtil;
+import com.google.android.gms.common.api.GoogleApiClient;
+import com.google.android.gms.location.LocationRequest;
+import com.google.android.gms.location.LocationServices;
 
 import org.ksoap2.SoapEnvelope;
 import org.ksoap2.serialization.SoapObject;
@@ -71,19 +84,21 @@ import cpm.com.lenovotraining.lenovotrainer.MainActivity;
 import cpm.com.lenovotraining.xmlHandler.XMLHandlers;
 import cpm.com.lenovotraining.xmlgettersetter.AddNewEmployeeGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.AllIsdNEmployeeGetterSetter;
+import cpm.com.lenovotraining.xmlgettersetter.CoverageBean;
 import cpm.com.lenovotraining.xmlgettersetter.EmpCdIsdGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.JCPGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.NavMenuGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.StoreISDGetterSetter;
 
-public class StoreIsdActivity extends AppCompatActivity implements View.OnClickListener {
-
+public class StoreIsdActivity extends AppCompatActivity implements View.OnClickListener, GoogleApiClient.ConnectionCallbacks,
+        GoogleApiClient.OnConnectionFailedListener {
     private ArrayAdapter<CharSequence> isdAdapter;
     Spinner spinner_isd;
     Database db;
+    boolean enabled;
     ArrayList<StoreISDGetterSetter> storeISDGetterSetters;
     private SharedPreferences preferences;
-    String store_cd, training_mode_cd, manned;
+    String store_cd, training_mode_cd, manned, visit_date, username;
     Button btn_next;
     Button btn_add_isd, btn_cancel;
     Data data;
@@ -101,10 +116,11 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
     CardView cardView_isd;
     ImageView isd_image, isdimage;
     String _pathforcheck = "", _path, str, intime, image1, img1 = "", _pathforcheck1 = "", image2, _path1;
-    ArrayList<JCPGetterSetter> jcpGetterSetters = new ArrayList<>();
     RelativeLayout layout_camera;
     String trainning_mode = "";
-
+    GoogleApiClient mGoogleApiClient;
+    String lat = "0.0", lon = "0.0";
+    private LocationManager locmanager = null;
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -128,6 +144,7 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
         layout_camera = (RelativeLayout) findViewById(R.id.layout_camera);
         str = Environment.getExternalStorageDirectory() + "/Lenovo_Trainer_Images/";
         materialDesignFAM.setClosedOnTouchOutside(true);
+
         training_mode_cd = getIntent().getStringExtra(CommonString.KEY_TRAINING_MODE_CD);
         manned = getIntent().getStringExtra(CommonString.KEY_MANAGED);
         if (manned.equals("0")) {
@@ -135,15 +152,24 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
             cardView_isd.setVisibility(View.GONE);
             materialDesignFAM.removeMenuButton(fab_add_existing);
         }
-        preferences = PreferenceManager.getDefaultSharedPreferences(this);
 
+        preferences = PreferenceManager.getDefaultSharedPreferences(this);
         store_cd = preferences.getString(CommonString.KEY_STORE_CD, null);
+        visit_date = preferences.getString(CommonString.KEY_DATE, null);
         trainning_mode = preferences.getString(CommonString.KEY_TRAINING_MODE, null);
+        username = preferences.getString(CommonString.KEY_USERNAME, null);
+
+        setTitle("Select Training - " + visit_date);
         fab_add_existing.setOnClickListener(this);
         fab_add_new_employee.setOnClickListener(this);
         db = new Database(getApplicationContext());
         db.open();
-        allIsdNEmployeeList = db.getAllIsdNEmployeeData(store_cd);
+        if (manned.equals("0")) {
+            allIsdNEmployeeList = db.getAllMannedNewNEmployeeData(store_cd);
+        } else {
+            allIsdNEmployeeList = db.getAllIsdNEmployeeData(store_cd);
+
+        }
         if (allIsdNEmployeeList.size() > 0) {
             IsdAddedAdapter isdAddedAdapter = new IsdAddedAdapter(this, allIsdNEmployeeList);
             rec_isd.setAdapter(isdAddedAdapter);
@@ -186,6 +212,55 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
         } else {
             layout_camera.setVisibility(View.VISIBLE);
         }
+
+
+        locmanager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+
+        if (mGoogleApiClient == null) {
+            mGoogleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
+        }
+        if (Build.VERSION.SDK_INT >= 23 &&
+                ContextCompat.checkSelfPermission(getApplicationContext(),
+                        Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
+                ContextCompat.checkSelfPermission(getApplicationContext(),
+                        Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+        locmanager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        enabled = locmanager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        // Check if enabled and if not send user to the GSP settings
+        // Better solution would be to display a dialog and suggesting to
+        // go to the settings
+        if (!enabled) {
+            AlertDialog.Builder alertDialog = new AlertDialog.Builder(this);
+            // Setting Dialog Title
+            alertDialog.setTitle("GPS IS DISABLED...");
+            // Setting Dialog Message
+            alertDialog.setMessage("Click ok to enable GPS.");
+            // Setting Positive "Yes" Button
+            alertDialog.setPositiveButton("YES",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            Intent intent = new Intent(Settings.ACTION_LOCATION_SOURCE_SETTINGS);
+                            startActivity(intent);
+                            dialog.dismiss();
+                        }
+                    });
+            // Setting Negative "NO" Button
+            alertDialog.setNegativeButton("NO",
+                    new DialogInterface.OnClickListener() {
+                        public void onClick(DialogInterface dialog, int which) {
+                            // Write your code here to invoke NO event
+                            dialog.cancel();
+                        }
+                    });
+            // Showing Alert Message
+            alertDialog.show();
+        }
     }
 
     @Override
@@ -201,8 +276,7 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
                 if (trainning_mode.equalsIgnoreCase("Remote")) {
                     if (isd_cd.equals("")) {
                         Snackbar.make(lay_spin, "First select an ISD", Snackbar.LENGTH_LONG).setAction("Action", null).show();
-                    }
-                    else {
+                    } else {
                         boolean is_isd_exists = false;
                         for (int i = 0; i < allIsdNEmployeeList.size(); i++) {
                             if (allIsdNEmployeeList.get(i).getIsd_cd().equals(isd_cd)) {
@@ -211,11 +285,8 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
                             }
 
                         }
-
                         if (is_isd_exists) {
-
                             if (is_new_isd_flag) {
-
                                 lay_next.setVisibility(View.VISIBLE);
                                 lay_spin.setVisibility(View.VISIBLE);
                                 lay_add_isd.setVisibility(View.GONE);
@@ -223,16 +294,13 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
                                 empCdIsdGetterSetter = null;
                                 is_new_isd_flag = false;
                             } else {
-
                                 isd_cd = "";
                                 spinner_isd.setSelection(0);
                             }
-
                             Snackbar.make(lay_spin, "ISD already done", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                         } else {
                             startAuditOrTopic(null, is_new_isd_flag);
                         }
-
                     }
                 } else {
                     if (isd_cd.equals("")) {
@@ -248,12 +316,8 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
                             }
 
                         }
-
-
                         if (is_isd_exists) {
-
                             if (is_new_isd_flag) {
-
                                 lay_next.setVisibility(View.VISIBLE);
                                 lay_spin.setVisibility(View.VISIBLE);
                                 lay_add_isd.setVisibility(View.GONE);
@@ -261,77 +325,59 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
                                 empCdIsdGetterSetter = null;
                                 is_new_isd_flag = false;
                             } else {
-
                                 isd_cd = "";
                                 spinner_isd.setSelection(0);
                             }
-
                             Snackbar.make(lay_spin, "ISD already done", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                         } else {
                             startAuditOrTopic(null, is_new_isd_flag);
                         }
-
                     }
-
                 }
                 break;
-
             case R.id.btn_cancel:
-
                 lay_next.setVisibility(View.VISIBLE);
                 lay_spin.setVisibility(View.VISIBLE);
                 lay_add_isd.setVisibility(View.GONE);
                 isd_cd = "";
                 empCdIsdGetterSetter = null;
                 is_new_isd_flag = false;
-
                 break;
 
             case R.id.fab_add_existing:
-
                 materialDesignFAM.close(true);
-
                 final Dialog dialog_emp = new Dialog(StoreIsdActivity.this);
                 dialog_emp.setTitle("Get ISD");
                 //dialog_emp.setCancelable(false);
                 //dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
                 dialog_emp.setContentView(R.layout.enter_empid_dialog_layout);
-
                 final EditText editEmpCd = (EditText) dialog_emp.findViewById(R.id.et_empid);
                 Button btngetIsd = (Button) dialog_emp.findViewById(R.id.btn_get_isd);
+                final LinearLayout layout_existing_employee = (LinearLayout) dialog_emp.findViewById(R.id.existing_emp_layout);
 
                 btngetIsd.setOnClickListener(new View.OnClickListener() {
                     @Override
                     public void onClick(View v) {
                         emp_id = editEmpCd.getText().toString();
                         if (emp_id.equals("")) {
-                            Snackbar.make(lay_spin, "First enter employee id ", Snackbar.LENGTH_SHORT).show();
-
+                            Snackbar.make(layout_existing_employee, "First enter employee id ", Snackbar.LENGTH_SHORT).show();
                         } else {
                             dialog_emp.cancel();
                             new GetISDTask().execute();
                         }
-
                     }
                 });
-
                 dialog_emp.show();
-
                 break;
 
             case R.id.fab_add_new_employee:
-
                 materialDesignFAM.close(true);
                 showAddNewEmployee();
-
                 break;
             case R.id.isd_image:
                 intime = String.valueOf(current_Time_date());
-
                 _pathforcheck = store_cd + "Store" + "Image" + intime + ".jpg";
-
                 _path = str + _pathforcheck;
-
 
                 startCameraActivity();
                 break;
@@ -354,6 +400,7 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
     //ISD Asynctask
     class GetISDTask extends AsyncTask<Void, Void, String> {
         private ProgressDialog dialog = null;
+
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
@@ -408,7 +455,6 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
                 }
 
 
-
             } catch (MalformedURLException e) {
 
                 runOnUiThread(new Runnable() {
@@ -450,9 +496,7 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-
             dialog.cancel();
-
             if (result.equals(CommonString.KEY_NO_DATA)) {
                 Snackbar.make(lay_add_isd, "Inavlid Employee Id", Snackbar.LENGTH_SHORT).show();
             } else {
@@ -489,7 +533,6 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
         List<AllIsdNEmployeeGetterSetter> data = Collections.emptyList();
 
         public IsdAddedAdapter(Context context, List<AllIsdNEmployeeGetterSetter> data) {
-
             inflator = LayoutInflater.from(context);
             this.data = data;
 
@@ -497,23 +540,17 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
 
         @Override
         public IsdAddedAdapter.MyViewHolder onCreateViewHolder(ViewGroup parent, int i) {
-
             View view = inflator.inflate(R.layout.item_isd_added_layout, parent, false);
-
             MyViewHolder holder = new MyViewHolder(view);
-
             return holder;
         }
 
         @Override
         public void onBindViewHolder(final IsdAddedAdapter.MyViewHolder viewHolder, final int position) {
-
             final AllIsdNEmployeeGetterSetter current = data.get(position);
-
             viewHolder.tv_name.setText(current.getName());
-            viewHolder.tv_topic.setText(current.getTopic());
+            //  viewHolder.tv_topic.setText(current.getTopic());
             viewHolder.tv_type.setText(current.getType());
-
         }
 
         @Override
@@ -530,7 +567,7 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
             public MyViewHolder(View itemView) {
                 super(itemView);
                 tv_name = (TextView) itemView.findViewById(R.id.tv_isd);
-                tv_topic = (TextView) itemView.findViewById(R.id.tv_topic);
+                // tv_topic = (TextView) itemView.findViewById(R.id.tv_topic);
                 tv_type = (TextView) itemView.findViewById(R.id.tv_training_type);
 
             }
@@ -541,53 +578,105 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
 
     @Override
     public void onBackPressed() {
-        //super.onBackPressed();
         finish();
         overridePendingTransition(R.anim.activity_back_in, R.anim.activity_back_out);
     }
 
-    //---------------------------------------
+    public long checkMid() {
+        return db.CheckMid(visit_date, store_cd);
+    }
 
     public void startAuditOrTopic(AddNewEmployeeGetterSetter addNewEmployeeGetterSetter, boolean is_new_isd) {
         Intent in1;
-        if (training_mode_cd.equals("1")) {
-
-            in1 = new Intent(getApplicationContext(), AuditActivity.class);
-            in1.putExtra(CommonString.KEY_ISD_CD, isd_cd);
-            in1.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-            in1.putExtra(CommonString.KEY_MANAGED, manned);
-            in1.putExtra(CommonString.KEY_ISD_IMAGE, img1);
-
-            if (is_new_isd) {
-                is_new_isd_flag = false;
-                in1.putExtra(CommonString.KEY_NEW_ISD, empCdIsdGetterSetter);
+        if (manned.equals("0")) {
+            if (training_mode_cd.equals("1")) {
+                long mid = 0;
+                mid = checkMid();
+                if (mid == 0) {
+                    CoverageBean cdata = new CoverageBean();
+                    cdata.setStoreId(store_cd);
+                    cdata.setVisitDate(visit_date);
+                    cdata.setUserId(username);
+                    cdata.setInTime(getCurrentTime());
+                    cdata.setOutTime(getCurrentTime());
+                    cdata.setReason("");
+                    cdata.setReasonid("0");
+                    cdata.setLatitude(lat);
+                    cdata.setLongitude(lon);
+                    cdata.setStatus(CommonString.KEY_INVALID);
+                    cdata.setTraining_mode_cd(training_mode_cd);
+                    cdata.setManaged(manned);
+                    cdata.setRemark("");
+                    db.InsertCoverageData(cdata);
+                }
+            } else {
+                long mid = 0;
+                mid = checkMid();
+                if (mid == 0) {
+                    CoverageBean cdata = new CoverageBean();
+                    cdata.setStoreId(store_cd);
+                    cdata.setVisitDate(visit_date);
+                    cdata.setUserId(username);
+                    cdata.setInTime(getCurrentTime());
+                    cdata.setOutTime(getCurrentTime());
+                    cdata.setReason("");
+                    cdata.setReasonid("0");
+                    cdata.setLatitude(lat);
+                    cdata.setLongitude(lon);
+                    cdata.setStatus(CommonString.KEY_VALID);
+                    cdata.setTraining_mode_cd(training_mode_cd);
+                    cdata.setManaged(manned);
+                    cdata.setRemark("");
+                    db.InsertCoverageData(cdata);
+                }
             }
-            if (addNewEmployeeGetterSetter != null)
-                in1.putExtra(CommonString.KEY_NEW_EMPLOYEE, addNewEmployeeGetterSetter);
+
+            if (isd_cd.equals("0") && addNewEmployeeGetterSetter != null) {
+                db.insertNewEmployeeForManned_ZeroData(addNewEmployeeGetterSetter, store_cd, manned, img1);
+            }
+            Intent in = new Intent(getApplicationContext(), RouteTrainingActivity.class);
+            startActivity(in);
+            overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+            finish();
         } else {
-            in1 = new Intent(getApplicationContext(), TrainingActivity.class);
-            in1.putExtra(CommonString.KEY_ISD_CD, isd_cd);
-            in1.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-            in1.putExtra(CommonString.KEY_MANAGED, manned);
-            in1.putExtra(CommonString.KEY_ISD_IMAGE, img1);
-            if (is_new_isd) {
-                is_new_isd_flag = false;
-                in1.putExtra(CommonString.KEY_NEW_ISD, empCdIsdGetterSetter);
+            if (training_mode_cd.equals("1")) {
+////intent for moved classssss
+                in1 = new Intent(getApplicationContext(), AuditActivity.class);
+                in1.putExtra(CommonString.KEY_ISD_CD, isd_cd);
+                in1.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
+                in1.putExtra(CommonString.KEY_MANAGED, manned);
+                in1.putExtra(CommonString.KEY_ISD_IMAGE, img1);
+
+                if (is_new_isd) {
+                    is_new_isd_flag = false;
+                    in1.putExtra(CommonString.KEY_NEW_ISD, empCdIsdGetterSetter);
+                }
+                if (addNewEmployeeGetterSetter != null)
+                    in1.putExtra(CommonString.KEY_NEW_EMPLOYEE, addNewEmployeeGetterSetter);
+            } else {
+                ////intent for moved classssss
+                in1 = new Intent(getApplicationContext(), TrainingActivity.class);
+                in1.putExtra(CommonString.KEY_ISD_CD, isd_cd);
+                in1.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
+                in1.putExtra(CommonString.KEY_MANAGED, manned);
+                in1.putExtra(CommonString.KEY_ISD_IMAGE, img1);
+                if (is_new_isd) {
+                    is_new_isd_flag = false;
+                    in1.putExtra(CommonString.KEY_NEW_ISD, empCdIsdGetterSetter);
+                }
+
+                if (addNewEmployeeGetterSetter != null)
+                    in1.putExtra(CommonString.KEY_NEW_EMPLOYEE, addNewEmployeeGetterSetter);
             }
 
-            if (addNewEmployeeGetterSetter != null)
-                in1.putExtra(CommonString.KEY_NEW_EMPLOYEE, addNewEmployeeGetterSetter);
+            startActivity(in1);
+            overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+            finish();
         }
 
-        startActivity(in1);
-
-        overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-
-        finish();
     }
 
     public void showAddNewEmployee() {
-
         final Dialog dialog_new_emp = new Dialog(StoreIsdActivity.this);
         dialog_new_emp.setTitle("Add Employee");
         dialog_new_emp.setContentView(R.layout.add_new_employee_dialog);
@@ -595,8 +684,8 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
         final EditText editPhone = (EditText) dialog_new_emp.findViewById(R.id.et_phone);
         final EditText editEmail = (EditText) dialog_new_emp.findViewById(R.id.et_email_id);
         final CheckBox cb_isd = (CheckBox) dialog_new_emp.findViewById(R.id.cb_isisd);
-        RelativeLayout rl_camera_dialog= (RelativeLayout) dialog_new_emp.findViewById(R.id.rl_camera_dialog);
-        if (trainning_mode.equalsIgnoreCase("Remote")){
+        final RelativeLayout rl_camera_dialog = (RelativeLayout) dialog_new_emp.findViewById(R.id.rl_camera_dialog);
+        if (trainning_mode.equalsIgnoreCase("Remote")) {
             rl_camera_dialog.setVisibility(View.GONE);
         }
 
@@ -618,10 +707,12 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
             @Override
             public void onClick(View v) {
                 intime = String.valueOf(current_Time_date());
-                _pathforcheck1 = store_cd + "Store" + "Image" + intime + ".jpg";
-
+                if (manned.equals("0")) {
+                    _pathforcheck1 = store_cd + "_UNMANAGED_IMG_" + intime + ".jpg";
+                } else {
+                    _pathforcheck1 = store_cd + "_MANAGED_IMG_" + intime + ".jpg";
+                }
                 _path1 = str + _pathforcheck1;
-
                 startCameraActivity1();
 
             }
@@ -633,37 +724,36 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
                 name = editName.getText().toString();
                 phone = editPhone.getText().toString();
                 email = editEmail.getText().toString();
-                if (trainning_mode.equalsIgnoreCase("Remote")){
+                if (trainning_mode.equalsIgnoreCase("Remote")) {
                     if (name.isEmpty()) {
-                        Snackbar.make(lay_spin, "First enter name ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter name ", Snackbar.LENGTH_SHORT).show();
                     } else if (phone.isEmpty()) {
-                        Snackbar.make(lay_spin, "First enter mobile number ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter mobile number ", Snackbar.LENGTH_SHORT).show();
                     } else if (phone.length() < 10) {
-                        Snackbar.make(lay_spin, "First enter 10 digit mobile number ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter 10 digit mobile number ", Snackbar.LENGTH_SHORT).show();
                     } else if (email.isEmpty()) {
-                        Snackbar.make(lay_spin, "First enter email id ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter email id ", Snackbar.LENGTH_SHORT).show();
                     } else if (!isValidEmail(email)) {
-                        Snackbar.make(lay_spin, "First enter valid email id ", Snackbar.LENGTH_SHORT).show();
-                    }
-                    else {
+                        Snackbar.make(rl_camera_dialog, "First enter valid email id ", Snackbar.LENGTH_SHORT).show();
+                    } else {
                         dialog_new_emp.cancel();
                         isd_cd = "0";
                         AddNewEmployeeGetterSetter addNewEmployee = new AddNewEmployeeGetterSetter(name, email, phone, isIsd);
                         startAuditOrTopic(addNewEmployee, false);
                     }
-                }else {
+                } else {
                     if (name.isEmpty()) {
-                        Snackbar.make(lay_spin, "First enter name ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter name ", Snackbar.LENGTH_SHORT).show();
                     } else if (phone.isEmpty()) {
-                        Snackbar.make(lay_spin, "First enter mobile number ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter mobile number ", Snackbar.LENGTH_SHORT).show();
                     } else if (phone.length() < 10) {
-                        Snackbar.make(lay_spin, "First enter 10 digit mobile number ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter 10 digit mobile number ", Snackbar.LENGTH_SHORT).show();
                     } else if (email.isEmpty()) {
-                        Snackbar.make(lay_spin, "First enter email id ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter email id ", Snackbar.LENGTH_SHORT).show();
                     } else if (!isValidEmail(email)) {
-                        Snackbar.make(lay_spin, "First enter valid email id ", Snackbar.LENGTH_SHORT).show();
+                        Snackbar.make(rl_camera_dialog, "First enter valid email id ", Snackbar.LENGTH_SHORT).show();
                     } else if (img1.equalsIgnoreCase("")) {
-                        Snackbar.make(lay_spin, "Please capture image", Snackbar.LENGTH_LONG).setAction("Action", null).show();
+                        Snackbar.make(rl_camera_dialog, "Please capture image", Snackbar.LENGTH_LONG).setAction("Action", null).show();
                     } else {
                         dialog_new_emp.cancel();
                         isd_cd = "0";
@@ -679,12 +769,9 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
         btn_cancel.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-
                 dialog_new_emp.cancel();
-
             }
         });
-
         dialog_new_emp.show();
 
     }
@@ -702,6 +789,14 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
 
             e.printStackTrace();
         }
+    }
+
+    public String getCurrentTime() {
+        Calendar m_cal = Calendar.getInstance();
+        SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
+        String cdate = formatter.format(m_cal.getTime());
+        return cdate;
+
     }
 
     protected void startCameraActivity() {
@@ -757,4 +852,28 @@ public class StoreIsdActivity extends AppCompatActivity implements View.OnClickL
     public final static boolean isValidEmail(CharSequence target) {
         return !TextUtils.isEmpty(target) && android.util.Patterns.EMAIL_ADDRESS.matcher(target).matches();
     }
+
+    @Override
+    public void onConnected(Bundle bundle) {
+        Location mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        if (mLastLocation != null) {
+            lat = String.valueOf(mLastLocation.getLatitude());
+            lon = String.valueOf(mLastLocation.getLongitude());
+        }
+    }
+
+    @Override
+    public void onConnectionSuspended(int i) {
+    }
+
+    @Override
+    public void onConnectionFailed(ConnectionResult connectionResult) {
+    }
+
+    protected void onStart() {
+        mGoogleApiClient.connect();
+        super.onStart();
+    }
+
+
 }

@@ -69,8 +69,7 @@ public class ImageUploadActivity extends Activity {
             androidHttpTransport.call(CommonString.SOAP_ACTION_UPLOAD_IMAGE, envelope);
             Object result = (Object) envelope.getResponse();
             if (result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-                File file = new File(CommonString.FILE_PATH + path);
-                boolean deleted = file.delete();
+                new File(CommonString.FILE_PATH + path).delete();
             }
         } catch (Exception e) {
             System.out.println(e.getMessage());

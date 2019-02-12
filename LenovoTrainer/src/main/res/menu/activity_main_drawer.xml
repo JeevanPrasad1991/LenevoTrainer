@@ -4,32 +4,40 @@
     <group android:checkableBehavior="single">
         <item
             android:id="@+id/nav_daily_entry"
-            android:icon="@drawable/ic_menu_send"
+            android:icon="@mipmap/entry_grey"
             android:title="Daily Entry" />
         <item
             android:id="@+id/nav_download"
-            android:icon="@drawable/ic_menu_camera"
+            android:icon="@mipmap/download_grey"
             android:title="Download" />
         <item
             android:id="@+id/nav_upload"
-            android:icon="@drawable/ic_menu_gallery"
+            android:icon="@mipmap/upload_grey"
             android:title="Upload" />
+
         <item
-            android:id="@+id/nav_exit"
-            android:icon="@drawable/ic_menu_manage"
-            android:title="Exit" />
+            android:id="@+id/nav_sTeam_training"
+            android:icon="@drawable/ic_menu_gallery"
+            android:title="Sale Team Training" />
 
         <item
             android:id="@+id/nav_export_database"
-            android:icon="@drawable/ic_menu_send"
+            android:icon="@mipmap/services_grey"
             android:title="Export Database" />
+
+        <item
+            android:id="@+id/nav_exit"
+            android:icon="@mipmap/exit_grey"
+            android:title="Exit" />
+
+
     </group>
 
     <item android:title="Communicate">
         <menu>
             <item
                 android:id="@+id/nav_help"
-                android:icon="@drawable/ic_menu_send"
+                android:icon="@mipmap/services_grey"
                 android:title="Help" />
         </menu>
     </item>
