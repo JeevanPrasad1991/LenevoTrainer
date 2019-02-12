@@ -4,14 +4,14 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingBottom="5dp"
+    android:background="@color/grey_background"
     android:paddingLeft="5dp"
-    android:paddingRight="5dp"
     android:paddingTop="5dp"
+    android:paddingRight="5dp"
+    android:paddingBottom="5dp"
     app:layout_behavior="@string/appbar_scrolling_view_behavior"
     tools:context=".lenovotrainer.MainActivity"
-    tools:showIn="@layout/app_bar_main"
-    android:background="@color/grey_background">
+    tools:showIn="@layout/app_bar_main">
 
     <android.support.v7.widget.RecyclerView
         android:id="@+id/rec_store_data"
@@ -23,10 +23,9 @@
 
     <ImageView
         android:id="@+id/img_logo"
-        android:layout_width="300dp"
-        android:layout_height="204dp"
-
-        android:background="@drawable/logo_lenovo"
-        android:layout_centerInParent="true"/>
+        android:layout_width="438px"
+        android:layout_height="145px"
+        android:layout_centerInParent="true"
+        android:background="@drawable/logo_lenovo" />
 
 </RelativeLayout>

@@ -207,7 +207,7 @@ public class UploadGeotaggingActivity extends Activity {
                 // TODO Auto-generated catch block
                 e.printStackTrace();
             }
-            if (up_success_flag == true) {
+            if (up_success_flag) {
                 return CommonString.KEY_SUCCESS;
             } else {
                 return CommonString.KEY_FAILURE;
@@ -219,9 +219,6 @@ public class UploadGeotaggingActivity extends Activity {
             super.onPostExecute(result);
             if (result.contains(CommonString.KEY_SUCCESS)) {
                 Toast.makeText(getApplicationContext(), "GeoTag Success", Toast.LENGTH_LONG).show();
-                Intent intent = new Intent(UploadGeotaggingActivity.this, RouteTrainingActivity.class);
-               // intent.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-                startActivity(intent);
                 finish();
             } else {
                 showAlert("Network Problem");
@@ -234,9 +231,6 @@ public class UploadGeotaggingActivity extends Activity {
         builder.setMessage(str).setCancelable(false)
                 .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                     public void onClick(DialogInterface dialog, int id) {
-                        Intent intent = new Intent(UploadGeotaggingActivity.this, RouteTrainingActivity.class);
-                       // intent.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-                        startActivity(intent);
                         finish();
                     }
                 });

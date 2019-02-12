@@ -30,11 +30,13 @@ import cpm.com.lenovotraining.bean.TableBean;
 import cpm.com.lenovotraining.constants.CommonString;
 import cpm.com.lenovotraining.database.Database;
 import cpm.com.lenovotraining.xmlHandler.XMLHandlers;
+import cpm.com.lenovotraining.xmlgettersetter.AuditChecklistAnswerGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.AuditChecklistGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.IsdPerformanceGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.JCPGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.NonWorkingReasonGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.QuizQuestionGettersetter;
+import cpm.com.lenovotraining.xmlgettersetter.SaleTeamGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.StoreISDGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.TrainingTopicGetterSetter;
 
@@ -55,6 +57,8 @@ public class CompleteDownloadActivity extends AppCompatActivity {
     AuditChecklistGetterSetter auditChecklistGetterSetter;
     NonWorkingReasonGetterSetter nonworkinggettersetter;
     IsdPerformanceGetterSetter isdPerformanceGetterSetter;
+    AuditChecklistAnswerGetterSetter auditChecklistAnswerGetterSetter;
+    SaleTeamGetterSetter saleTeamGetterSetter;
     boolean download_flag = true;
 
     @Override
@@ -96,7 +100,6 @@ public class CompleteDownloadActivity extends AppCompatActivity {
             dialog = new Dialog(context);
             dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
             dialog.setContentView(R.layout.custom);
-            //dialog.setTitle("Download Files");
             dialog.setCancelable(false);
             dialog.show();
             pb = (ProgressBar) dialog.findViewById(R.id.progressBar1);
@@ -112,36 +115,29 @@ public class CompleteDownloadActivity extends AppCompatActivity {
             try {
 
                 data = new Data();
+                data.value = 10;
+                data.name = "Downloading Data";
+                publishProgress(data);
 
                 // JCP data
-
-                XmlPullParserFactory factory = XmlPullParserFactory
-                        .newInstance();
+                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
                 factory.setNamespaceAware(true);
                 XmlPullParser xpp = factory.newPullParser();
 
-                SoapObject request = new SoapObject(CommonString.NAMESPACE,
-                        CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
+                SoapObject request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
                 request.addProperty("UserName", _UserId);
                 request.addProperty("Type", "JOURNEY_PLAN_TRAINER");
 
-                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(
-                        SoapEnvelope.VER11);
+                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
-
-                HttpTransportSE androidHttpTransport = new HttpTransportSE(
-                        CommonString.URL);
-
-                androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL,
-                        envelope);
+                HttpTransportSE androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
+                androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
                 Object result = (Object) envelope.getResponse();
-
                 if (result.toString() != null) {
                     xpp.setInput(new StringReader(result.toString()));
                     xpp.next();
                     eventType = xpp.getEventType();
-
                     jcpGetterSetter = XMLHandlers.JCPXMLHandler(xpp, eventType);
 
                     if (jcpGetterSetter.getSTORE_CD().size() > 0) {
@@ -151,13 +147,10 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                     } else {
                         return "JOURNEY_PLAN_TRAINER";
                     }
-
-                    data.value = 30;
-                    data.name = "JCP Data Downloading";
-
+                    data.value = 20;
+                    data.name = "JCP Data";
+                    publishProgress(data);
                 }
-
-                publishProgress(data);
 
 
                 // Training Topic
@@ -174,85 +167,57 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
 
-                androidHttpTransport = new HttpTransportSE(
-                        CommonString.URL);
+                androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
 
-                androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL,
-                        envelope);
+                androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
                 result = (Object) envelope.getResponse();
-
                 if (result.toString() != null) {
 
                     xpp.setInput(new StringReader(result.toString()));
                     xpp.next();
                     eventType = xpp.getEventType();
-
                     trainingTopicGetterSetter = XMLHandlers.TrainingTopicXMLHandler(xpp, eventType);
-
+                    String training_topicTable = trainingTopicGetterSetter.getTable_training_topic();
+                    TableBean.setTable_trainig_topic(training_topicTable);
                     if (trainingTopicGetterSetter.getTOPIC_CD().size() > 0) {
                         resultHttp = CommonString.KEY_SUCCESS;
-                        String training_topicTable = trainingTopicGetterSetter.getTable_training_topic();
-                        TableBean.setTable_trainig_topic(training_topicTable);
                     } else {
                         return "TRAINING_TOPIC";
                     }
-
-                    data.value = 40;
-                    data.name = "Training Topic Data Downloading";
-
+                    data.value = 30;
+                    data.name = "Training Topic Data";
+                    publishProgress(data);
                 }
 
-                publishProgress(data);
-
                 // STore ISD data
-
-                factory = XmlPullParserFactory
-                        .newInstance();
+                factory = XmlPullParserFactory.newInstance();
                 factory.setNamespaceAware(true);
                 xpp = factory.newPullParser();
-
-                request = new SoapObject(CommonString.NAMESPACE,
-                        CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
+                request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
                 request.addProperty("UserName", _UserId);
                 request.addProperty("Type", "STORE_ISD");
-
-                envelope = new SoapSerializationEnvelope(
-                        SoapEnvelope.VER11);
+                envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
-
-                androidHttpTransport = new HttpTransportSE(
-                        CommonString.URL);
-
-                androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL,
-                        envelope);
+                androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
+                androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
                 result = (Object) envelope.getResponse();
-
                 if (result.toString() != null) {
-
                     xpp.setInput(new StringReader(result.toString()));
                     xpp.next();
                     eventType = xpp.getEventType();
-
                     storeISDGetterSetter = XMLHandlers.StoreISDXMLHandler(xpp, eventType);
-
                     if (storeISDGetterSetter.getSTORE_CD().size() > 0) {
                         resultHttp = CommonString.KEY_SUCCESS;
-                        data.value = 50;
-                        data.name = "Store ISD Data Downloading";
-
+                        data.value = 40;
+                        data.name = "Store ISD Data";
+                        publishProgress(data);
                     }
-
                     String store_isd_Table = storeISDGetterSetter.getTable_store_isd();
                     if (store_isd_Table != null) {
-
                         TableBean.setTable_store_isd(store_isd_Table);
                     }
-
-
                 }
-
-                publishProgress(data);
 
                 // QUIZ_QUESTION
 
@@ -267,7 +232,7 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
 
-                androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
 
                 androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
                 result = (Object) envelope.getResponse();
@@ -277,9 +242,7 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                     xpp.setInput(new StringReader(result.toString()));
                     xpp.next();
                     eventType = xpp.getEventType();
-
                     quizQuestionGettersetter = XMLHandlers.QuizQuestionXMLHandler(xpp, eventType);
-
                     if (quizQuestionGettersetter.getQUESTION_CD().size() > 0) {
                         resultHttp = CommonString.KEY_SUCCESS;
                         String quiz_Table = quizQuestionGettersetter.getTable_quiz_question();
@@ -288,12 +251,11 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                     } else {
                         return "QUIZ_QUESTION";
                     }
-                    data.value = 60;
-                    data.name = "Quiz Data Downloading";
+                    data.value = 50;
+                    data.name = "Quiz Data";
+                    publishProgress(data);
 
                 }
-
-                publishProgress(data);
 
                 // AUDIT_CHECKLIST
 
@@ -302,14 +264,13 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                 factory.setNamespaceAware(true);
                 xpp = factory.newPullParser();
 
-                request = new SoapObject(CommonString.NAMESPACE,
-                        CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
+                request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
                 request.addProperty("UserName", _UserId);
                 request.addProperty("Type", "AUDIT_CHECKLIST");
                 envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
-                androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
 
                 androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
                 result = (Object) envelope.getResponse();
@@ -327,12 +288,12 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                     }
                     String audit_Table = auditChecklistGetterSetter.getTable_audit_checklist();
                     TableBean.setTable_audit_checklist(audit_Table);
-                    data.value = 85;
-                    data.name = "Audit Checklist Data Downloading";
+                    data.value = 60;
+                    data.name = "Audit Checklist Data";
+                    publishProgress(data);
 
                 }
 
-                publishProgress(data);
 
                 //Non Working Reason data
 
@@ -345,7 +306,7 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
 
-                androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
 
                 androidHttpTransport.call(
                         CommonString.SOAP_ACTION_UNIVERSAL, envelope);
@@ -368,15 +329,14 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                         return "NON_WORKING_REASON_NEW";
                     }
 
-                    data.value = 90;
-                    data.name = "Non Working Reason Downloading";
+                    data.value = 70;
+                    data.name = "Non Working Reason";
+                    publishProgress(data);
 
                 }
 
-                publishProgress(data);
 
                 //ISD Performance data
-
                 request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
 
                 request.addProperty("UserName", _UserId);
@@ -384,31 +344,75 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                 envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
-                androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
                 androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
                 Object resultperformance = (Object) envelope.getResponse();
                 if (resultperformance.toString() != null) {
-
                     xpp.setInput(new StringReader(resultperformance.toString()));
                     xpp.next();
                     eventType = xpp.getEventType();
-
                     isdPerformanceGetterSetter = XMLHandlers.isdPerformanceXML(xpp, eventType);
-
                     if (isdPerformanceGetterSetter.getISD_CD().size() > 0) {
                         resultHttp = CommonString.KEY_SUCCESS;
-                        data.value = 92;
-                        data.name = "Performance Downloading";
+                        data.value = 80;
+                        data.name = "Performance Data";
+                        publishProgress(data);
                     }
                     String isd_performance_table = isdPerformanceGetterSetter.getTable_isd_performance();
                     TableBean.setTable_isd_performance(isd_performance_table);
+                }
+
+                // AUDIT_CHECKLIST_ANSWER data
+                request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
+                request.addProperty("UserName", _UserId);
+                request.addProperty("Type", "AUDIT_CHECKLIST_ANSWER");
+                envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                envelope.dotNet = true;
+                envelope.setOutputSoapObject(request);
+                androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
+                androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
+                resultperformance = (Object) envelope.getResponse();
+                if (resultperformance.toString() != null) {
+                    xpp.setInput(new StringReader(resultperformance.toString()));
+                    xpp.next();
+                    eventType = xpp.getEventType();
+                    auditChecklistAnswerGetterSetter = XMLHandlers.AuditCheckLANSXMLHandler(xpp, eventType);
+                    if (auditChecklistAnswerGetterSetter.getAnswer_cd().size() > 0) {
+                        resultHttp = CommonString.KEY_SUCCESS;
+                        data.value = 90;
+                        data.name = "AUDIT CHECKLIST ANSWER Data";
+                    }
+                    TableBean.setTable_auditchecklist_answer(auditChecklistAnswerGetterSetter.getAuditchecklistANSTable());
+                }
+                publishProgress(data);
+
+                // SALES_TEAM data
+                request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
+                request.addProperty("UserName", _UserId);
+                request.addProperty("Type", "SALES_TEAM");
+                envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
+                envelope.dotNet = true;
+                envelope.setOutputSoapObject(request);
+                androidHttpTransport = new HttpTransportSE(CommonString.URL, 30000);
+                androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
+                resultperformance = (Object) envelope.getResponse();
+                if (resultperformance.toString() != null) {
+                    xpp.setInput(new StringReader(resultperformance.toString()));
+                    xpp.next();
+                    eventType = xpp.getEventType();
+                    saleTeamGetterSetter = XMLHandlers.SaleTeamXMLHandler(xpp, eventType);
+                    if (saleTeamGetterSetter.getTrainee_cd().size() > 0) {
+                        resultHttp = CommonString.KEY_SUCCESS;
+                        data.value = 95;
+                        data.name = "Sale Team Data";
+                    }
+                    TableBean.setTable_sale_team(saleTeamGetterSetter.getSaleTEAMTable());
                 }
                 publishProgress(data);
 
                 db.open();
                 db.insertJCPData(jcpGetterSetter);
                 db.insertTrainingtopicData(trainingTopicGetterSetter);
-
                 if (storeISDGetterSetter.getSTORE_CD().size() > 0) {
                     db.insertStoreISDData(storeISDGetterSetter);
                 } else {
@@ -423,8 +427,9 @@ public class CompleteDownloadActivity extends AppCompatActivity {
                 } else {
                     db.deletePerformanceDataOnNoData();
                 }
-
-
+                // AUDIT_CHECKLIST_ANSWER data
+                db.insertAuditCheckLisAnswertData(auditChecklistAnswerGetterSetter);
+                db.insertAuditCheckLisAnswertData(saleTeamGetterSetter);
                 data.value = 100;
                 data.name = "Finishing";
                 publishProgress(data);

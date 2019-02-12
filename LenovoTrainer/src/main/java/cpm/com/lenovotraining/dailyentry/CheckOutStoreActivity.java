@@ -4,6 +4,7 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -56,9 +57,9 @@ public class CheckOutStoreActivity extends AppCompatActivity {
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         username = preferences.getString(CommonString.KEY_USERNAME, "");
         visit_date = preferences.getString(CommonString.KEY_DATE, null);
-        store_cd = preferences.getString(CommonString.KEY_STORE_CD, "");
         db = new Database(this);
         db.open();
+        store_cd = getIntent().getStringExtra(CommonString.KEY_STORE_CD);
         coverageData = db.getCoverageSpecificData(store_cd, visit_date);
         store_intime = coverageData.get(0).getInTime();
         latitude = coverageData.get(0).getLatitude();
@@ -87,6 +88,13 @@ public class CheckOutStoreActivity extends AppCompatActivity {
             pb = (ProgressBar) dialog.findViewById(R.id.progressBar1);
             percentage = (TextView) dialog.findViewById(R.id.percentage);
             message = (TextView) dialog.findViewById(R.id.message);
+            final TextView tv_title = (TextView) dialog.findViewById(R.id.tv_title);
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    tv_title.setText("Uploading Checkout Data");
+                }
+            });
 
         }
 
@@ -102,7 +110,6 @@ public class CheckOutStoreActivity extends AppCompatActivity {
                 data.value = 20;
                 data.name = "Checked out Data Uploading";
                 publishProgress(data);
-
 
                 String onXML = "[STORE_CHECK_OUT_STATUS][USER_ID]"
                         + username
@@ -123,8 +130,7 @@ public class CheckOutStoreActivity extends AppCompatActivity {
                         + "[/CREATED_BY][/STORE_CHECK_OUT_STATUS]";
 
 
-                final String sos_xml = "[DATA]" + onXML
-                        + "[/DATA]";
+                final String sos_xml = "[DATA]" + onXML + "[/DATA]";
 
                 SoapObject request = new SoapObject(CommonString.NAMESPACE, "Upload_Store_ChecOut_Status");
                 request.addProperty("onXML", sos_xml);
@@ -140,12 +146,9 @@ public class CheckOutStoreActivity extends AppCompatActivity {
                 if (result.toString().equalsIgnoreCase(CommonString.KEY_NO_DATA)) {
                     return "Upload_Store_ChecOut_Status";
                 }
-                // for failure
                 if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
                     return "Upload_Store_ChecOut_Status";
                 }
-
-
                 data.value = 100;
                 data.name = "Checkout Done";
                 publishProgress(data);

@@ -1,27 +1,25 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/lin_lay"
     android:layout_width="fill_parent"
     android:layout_height="fill_parent"
-    android:background="@drawable/gradient_background"
     android:layout_gravity="center"
-    android:id="@+id/lin_lay"
+    android:background="@drawable/gradient_background"
     android:orientation="vertical"
-    android:weightSum="10"
-    >
+    android:weightSum="10">
 
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="4"
-        >
+        android:layout_weight="4">
+
         <ImageView
             android:layout_width="match_parent"
             android:layout_height="50dp"
-            android:background="@drawable/parinaam_logo"
             android:layout_marginLeft="5dp"
-            android:layout_marginRight="5dp"
             android:layout_marginTop="10dp"
-            />
+            android:layout_marginRight="5dp"
+            android:background="@drawable/parinaam_logo" />
 
     </RelativeLayout>
 
@@ -31,17 +29,15 @@
         android:layout_weight="6"
 
         >
+
         <ImageView
-            android:layout_width="300dp"
-            android:layout_height="204dp"
             android:id="@+id/logo"
+            android:layout_width="438px"
+            android:layout_height="145px"
             android:layout_centerHorizontal="true"
             android:background="@drawable/logo_lenovo" />
 
     </RelativeLayout>
-
-
-
 
 
 </LinearLayout>

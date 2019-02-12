@@ -6,6 +6,7 @@ import android.annotation.TargetApi;
 import android.app.Activity;
 
 import android.app.AlertDialog;
+import android.app.DatePickerDialog;
 import android.app.Dialog;
 import android.app.ProgressDialog;
 import android.content.Context;
@@ -22,27 +23,32 @@ import android.os.AsyncTask;
 
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.preference.PreferenceManager;
-import android.provider.Settings;
 import android.support.design.widget.Snackbar;
 import android.support.v4.content.ContextCompat;
+import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.AdapterView;
 import android.widget.AutoCompleteTextView;
 import android.widget.BaseAdapter;
 import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.EditText;
-import android.widget.ProgressBar;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.RadioButton;
 import android.widget.RadioGroup;
 import android.widget.Spinner;
@@ -77,7 +83,6 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.net.MalformedURLException;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.List;
 
@@ -92,17 +97,13 @@ import cpm.com.lenovotraining.xmlgettersetter.LoginGetterSetter;
 import cpm.com.lenovotraining.xmlgettersetter.QuestionGetterSetter;
 
 
-public class LoginActivity extends Activity implements
-        GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
-
+public class LoginActivity extends Activity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
     // Location updates intervals in sec
     private static int UPDATE_INTERVAL = 500; // 5 sec
     private static int FATEST_INTERVAL = 100; // 1 sec
     private static int DISPLACEMENT = 5; // 10 meters
-
     Location mLastLocation;
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 1000;
-
     // LogCat tag
     private static final String TAG = LoginActivity.class.getSimpleName();
 
@@ -116,7 +117,6 @@ public class LoginActivity extends Activity implements
     private EditText mPasswordView;
     private View mProgressView;
     private View mLoginFormView;
-
     private LocationRequest mLocationRequest;
     GoogleApiClient mGoogleApiClient;
 
@@ -124,48 +124,31 @@ public class LoginActivity extends Activity implements
      * A dummy authentication store containing known user names and passwords.
      * TODO: remove after connecting to a real authentication system.
      */
-    private static final String[] DUMMY_CREDENTIALS = new String[]{
-            "foo@example.com:hello", "bar@example.com:world"
-    };
-
+    private static final String[] DUMMY_CREDENTIALS = new String[]{"foo@example.com:hello", "bar@example.com:world"};
     TextView tv_version;
-    String app_ver;
-    String lat = "0.0";
-    String lon = "0.0";
-
+    String lat = "0.0", right_answer, rigth_answer_cd = "", qns_cd, ans_cd,app_ver,lon = "0.0";
     private SharedPreferences preferences = null;
     private SharedPreferences.Editor editor = null;
     private String p_username, p_password, user_id, password;
-
     private boolean isChecked;
-
-    private LocationManager locmanager = null;
-
     private Intent intent = null;
-
     private int versionCode;
     int eventType;
     LoginGetterSetter lgs = null;
-
     private QuestionGetterSetter questionGetterSetter;
-
     AttendanceReasonGetterSetter attendanceReasonGetterSetter;
-
-    String right_answer, rigth_answer_cd = "", qns_cd, ans_cd;
-
-    ProgressBar progressBar;
-
-    private Dialog dialog;
-    private ProgressBar pb;
-    private TextView percentage, message;
     //private Data data;
     private GoogleApiClient googleApiClient;
     private static final int REQUEST_LOCATION = 1;
-    AttendanceReasonGetterSetter attendanceReason = new AttendanceReasonGetterSetter();
+    AttendanceReasonGetterSetter selected_attendanceReason = new AttendanceReasonGetterSetter();
+    TextView text_fromdate, text_todate;
+    EditText attendence_remark;
+    int mYear, mMonth, mDay;
+    DatePickerDialog dpd;
+    Calendar calendar;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login_layout);
         // Set up the login form.
@@ -173,8 +156,10 @@ public class LoginActivity extends Activity implements
         tv_version = (TextView) findViewById(R.id.tv_version_code);
         //populateAutoComplete();
         mPasswordView = (EditText) findViewById(R.id.password);
-       /* mEmailView.setText("testtrainer");
-        mPasswordView.setText("cpm123");*/
+        // testtrainer
+        // cpm123
+        mEmailView.setText("testtrainer");
+        mPasswordView.setText("cpm123");
         mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
@@ -189,35 +174,27 @@ public class LoginActivity extends Activity implements
         Button mEmailSignInButton = (Button) findViewById(R.id.email_sign_in_button);
         mLoginFormView = findViewById(R.id.login_form);
         mProgressView = findViewById(R.id.login_progress);
-
         preferences = PreferenceManager.getDefaultSharedPreferences(this);
         editor = preferences.edit();
         p_username = preferences.getString(CommonString.KEY_USERNAME, null);
         p_password = preferences.getString(CommonString.KEY_PASSWORD, null);
         isChecked = preferences.getBoolean(CommonString.KEY_REMEMBER, false);
-
         try {
             app_ver = String.valueOf(getPackageManager().getPackageInfo(getPackageName(), 0).versionName);
-
-            tv_version.setText("Version " + app_ver);
+            tv_version.setText("Version - " + app_ver);
         } catch (PackageManager.NameNotFoundException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
         }
 
-
         // Check if enabled and if not send user to the GSP settings
         // Better solution would be to display a dialog and suggesting to
         // go to the settings
-
         checkgpsEnableDevice();
-
         // First we need to check availability of play services
         if (checkPlayServices()) {
-
             // Building the GoogleApi client
             buildGoogleApiClient();
-
             createLocationRequest();
         }
 
@@ -227,14 +204,11 @@ public class LoginActivity extends Activity implements
             return;
         }
 
-
         // Create a Folder for Images
-        File file = new File(Environment.getExternalStorageDirectory(),
-                "Lenovo_Trainer_Images");
+        File file = new File(Environment.getExternalStorageDirectory(), "Lenovo_Trainer_Images");
         if (!file.isDirectory()) {
             file.mkdir();
         }
-
         //Login
         mEmailSignInButton.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -243,14 +217,9 @@ public class LoginActivity extends Activity implements
                 imm.hideSoftInputFromWindow(mEmailView.getWindowToken(), 0);
                 if (checkgpsEnableDevice()) {
                     attemptLogin();
-                } else {
-                    Toast.makeText(LoginActivity.this, "Please Enable Gps", Toast.LENGTH_SHORT).show();
                 }
-
             }
         });
-
-
     }
 
 
@@ -263,35 +232,26 @@ public class LoginActivity extends Activity implements
         if (mAuthTask != null) {
             return;
         }
-
         // Reset errors.
         mEmailView.setError(null);
         mPasswordView.setError(null);
-
         // Store values at the time of the login attempt.
-        user_id = mEmailView.getText().toString();
-        password = mPasswordView.getText().toString();
-
+        user_id = mEmailView.getText().toString().trim();
+        password = mPasswordView.getText().toString().trim();
         boolean cancel = false;
         View focusView = null;
-
         // Check for a valid password, if the user entered one.
         if (!TextUtils.isEmpty(password) && !isPasswordValid(password)) {
             mPasswordView.setError(getString(R.string.error_invalid_password));
             focusView = mPasswordView;
             cancel = true;
         }
-
         // Check for a valid email address.
         if (TextUtils.isEmpty(user_id)) {
             mEmailView.setError(getString(R.string.error_field_required));
             focusView = mEmailView;
             cancel = true;
-        } /*else if (!isEmailValid(email)) {
-            mEmailView.setError(getString(R.string.error_invalid_email));
-            focusView = mEmailView;
-            cancel = true;
-        }*/
+        }
 
         if (cancel) {
             // There was an error; don't attempt login and focus the first
@@ -299,14 +259,10 @@ public class LoginActivity extends Activity implements
             focusView.requestFocus();
         } else {
 
-            p_username = preferences.getString(CommonString.KEY_USERNAME,
-                    null);
-            p_password = preferences.getString(CommonString.KEY_PASSWORD,
-                    null);
-
+            p_username = preferences.getString(CommonString.KEY_USERNAME, "").trim();
+            p_password = preferences.getString(CommonString.KEY_PASSWORD, "").trim();
             boolean previous_user_flag = false;
             if (p_username != null && p_password != null) {
-
                 if (user_id.equals(p_username) && password.equals(p_password)) {
                     previous_user_flag = true;
                 }
@@ -325,7 +281,6 @@ public class LoginActivity extends Activity implements
                         if (msg.what != 1) { // code if not connected
                             mProgressView.setVisibility(View.INVISIBLE);
                             Snackbar.make(mEmailView, CommonString.NO_INTERNET_CONNECTION, Snackbar.LENGTH_SHORT).show();
-
                         } else { // code if connected
                             // showProgress(true);
                             mProgressView.setVisibility(View.INVISIBLE);
@@ -334,33 +289,14 @@ public class LoginActivity extends Activity implements
                     }
                 };
 
-
                 mProgressView.setVisibility(View.VISIBLE);
-                isNetworkAvailable(h, 5000);
-/*
-                if(isOnline()){
-
-                    showProgress(true);
-                    new AuthenticateTask().execute();
-                }
-                else{
-
-                    Snackbar.make(mEmailView, CommonString.NO_INTERNET_CONNECTION,Snackbar.LENGTH_SHORT).show();
-                }*/
-
-
+                isNetworkAvailable(h, 4000);
             } else {
                 Snackbar.make(mEmailView, CommonString.UERNAME_OR_PASSWORD_IS_WRONG, Snackbar.LENGTH_SHORT).show();
             }
-
-
         }
     }
 
-    private boolean isEmailValid(String email) {
-        //TODO: Replace this with your own logic
-        return email.contains("@");
-    }
 
     private boolean isPasswordValid(String password) {
         //TODO: Replace this with your own logic
@@ -387,14 +323,6 @@ public class LoginActivity extends Activity implements
                 }
             });
 
-         /*   mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
-            mProgressView.animate().setDuration(shortAnimTime).alpha(
-                    show ? 1 : 0).setListener(new AnimatorListenerAdapter() {
-                @Override
-                public void onAnimationEnd(Animator animation) {
-                    mProgressView.setVisibility(show ? View.VISIBLE : View.GONE);
-                }
-            });*/
         } else {
             // The ViewPropertyAnimator APIs are not available, so simply show
             // and hide the relevant UI components.
@@ -405,19 +333,13 @@ public class LoginActivity extends Activity implements
 
     @Override
     public void onConnected(Bundle bundle) {
-
-        mLastLocation = LocationServices.FusedLocationApi
-                .getLastLocation(mGoogleApiClient);
-
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             if (mLastLocation != null) {
                 lat = String.valueOf(mLastLocation.getLatitude());
                 lon = String.valueOf(mLastLocation.getLongitude());
             }
-
         }
-
         startLocationUpdates();
 
     }
@@ -429,8 +351,7 @@ public class LoginActivity extends Activity implements
 
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
-        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
-                + connectionResult.getErrorCode());
+        Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = " + connectionResult.getErrorCode());
     }
 
     protected void onStart() {
@@ -451,10 +372,8 @@ public class LoginActivity extends Activity implements
      * the user.
      */
     public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
-
         private final String mEmail;
         private final String mPassword;
-
         UserLoginTask(String email, String password) {
             mEmail = email;
             mPassword = password;
@@ -463,14 +382,12 @@ public class LoginActivity extends Activity implements
         @Override
         protected Boolean doInBackground(Void... params) {
             // TODO: attempt authentication against a network service.
-
             try {
                 // Simulate network access.
                 Thread.sleep(2000);
             } catch (InterruptedException e) {
                 return false;
             }
-
             for (String credential : DUMMY_CREDENTIALS) {
                 String[] pieces = credential.split(":");
                 if (pieces[0].equals(mEmail)) {
@@ -487,7 +404,6 @@ public class LoginActivity extends Activity implements
         protected void onPostExecute(final Boolean success) {
             mAuthTask = null;
             showProgress(false);
-
             if (success) {
                 finish();
             } else {
@@ -504,13 +420,9 @@ public class LoginActivity extends Activity implements
     }
 
     public boolean CheckNetAvailability() {
-
         boolean connected = false;
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
-        if (connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE)
-                .getState() == NetworkInfo.State.CONNECTED
-                || connectivityManager.getNetworkInfo(
-                ConnectivityManager.TYPE_WIFI).getState() == NetworkInfo.State.CONNECTED) {
+        if (connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_MOBILE).getState() == NetworkInfo.State.CONNECTED || connectivityManager.getNetworkInfo(ConnectivityManager.TYPE_WIFI).getState() == NetworkInfo.State.CONNECTED) {
             // we are connected to a network
             connected = true;
         }
@@ -563,8 +475,10 @@ public class LoginActivity extends Activity implements
             }
         }.start();
     }
+
     private class AuthenticateTask extends AsyncTask<Void, Void, String> {
         private ProgressDialog dialog = null;
+
         @Override
         protected void onPreExecute() {
             // TODO Auto-generated method stub
@@ -582,9 +496,7 @@ public class LoginActivity extends Activity implements
 
             try {
                 String resultHttp = "";
-                versionCode = getPackageManager().getPackageInfo(
-                        getPackageName(), 0).versionCode;
-
+                versionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
                 if (lat == null || lat.equals("")) {
                     lat = "0.0";
                 }
@@ -603,25 +515,15 @@ public class LoginActivity extends Activity implements
                         + "[/USER_DATA][/DATA]";
 
                 SoapObject request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_LOGIN);
-
                 request.addProperty("onXML", userauth_xml);
-
-                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(
-                        SoapEnvelope.VER11);
+                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
-
-                HttpTransportSE androidHttpTransport = new HttpTransportSE(
-                        CommonString.URL);
-
-                androidHttpTransport.call(CommonString.SOAP_ACTION_LOGIN,
-                        envelope);
-
+                HttpTransportSE androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                androidHttpTransport.call(CommonString.SOAP_ACTION_LOGIN, envelope);
                 Object result = (Object) envelope.getResponse();
-
                 if (result.toString().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
                     return CommonString.KEY_FAILURE;
-
                 } else if (result.toString().equalsIgnoreCase(CommonString.KEY_FALSE)) {
                     return CommonString.KEY_FALSE;
 
@@ -635,76 +537,48 @@ public class LoginActivity extends Activity implements
                     xpp.setInput(new StringReader(result.toString()));
                     xpp.next();
                     eventType = xpp.getEventType();
-                    FailureGetterSetter failureGetterSetter = XMLHandlers
-                            .failureXMLHandler(xpp, eventType);
-
-                    if (failureGetterSetter.getStatus().equalsIgnoreCase(
-                            CommonString.KEY_FAILURE)) {
-
-
+                    FailureGetterSetter failureGetterSetter = XMLHandlers.failureXMLHandler(xpp, eventType);
+                    if (failureGetterSetter.getStatus().equalsIgnoreCase(CommonString.KEY_FAILURE)) {
                         return CommonString.KEY_FAILURE;
-
                     } else {
-
                         try {
                             // For String source
-
                             xpp.setInput(new StringReader(result.toString()));
                             xpp.next();
                             eventType = xpp.getEventType();
                             lgs = XMLHandlers.loginXMLHandler(xpp, eventType);
-
                         } catch (XmlPullParserException e) {
                             e.printStackTrace();
                         } catch (IOException e) {
                             e.printStackTrace();
                         }
-
                         // PUT IN PREFERENCES
                         editor.putString(CommonString.KEY_USERNAME, user_id);
                         editor.putString(CommonString.KEY_PASSWORD, password);
-                        editor.putString(CommonString.KEY_VERSION,
-                                lgs.getVERSION());
-
+                        editor.putString(CommonString.KEY_VERSION, lgs.getVERSION());
                         editor.putString(CommonString.KEY_PATH, lgs.getPATH());
-
                         editor.putString(CommonString.KEY_DATE, lgs.getDATE());
                         //temp hardcoded
-                        //editor.putString(CommonString.KEY_DATE, "09/17/2016");
-
+                        // editor.putString(CommonString.KEY_DATE, "09/17/2016");
                         editor.putString(CommonString.KEY_USER_TYPE, lgs.getRIGHTNAME());
-
                         editor.commit();
-
-
 
                     }
 
-                    request = new SoapObject(CommonString.NAMESPACE,
-                            CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
+                    request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
                     request.addProperty("UserName", user_id);
                     request.addProperty("Type", "TODAY_QUESTION");
-
-                    envelope = new SoapSerializationEnvelope(
-                            SoapEnvelope.VER11);
+                    envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                     envelope.dotNet = true;
                     envelope.setOutputSoapObject(request);
-
-                    androidHttpTransport = new HttpTransportSE(
-                            CommonString.URL);
-
-                    androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL,
-                            envelope);
+                    androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                    androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
                     result = (Object) envelope.getResponse();
-
                     if (result.toString() != null) {
-
                         xpp.setInput(new StringReader(result.toString()));
                         xpp.next();
                         eventType = xpp.getEventType();
-
                         questionGetterSetter = XMLHandlers.QuestionXMLHandler(xpp, eventType);
-
                         if (questionGetterSetter.getQuestion_cd().size() > 0) {
                             resultHttp = CommonString.KEY_SUCCESS;
                             String qnsTable = questionGetterSetter.getTable_question_today();
@@ -715,47 +589,35 @@ public class LoginActivity extends Activity implements
                     }
 
                     //Attendance download
-                    request = new SoapObject(CommonString.NAMESPACE,
-                            CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
+                    request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_NAME_UNIVERSAL_DOWNLOAD);
                     request.addProperty("UserName", user_id);
                     request.addProperty("Type", "NON_WORKING_REASON_ATTENDANCE");
-
                     envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                     envelope.dotNet = true;
                     envelope.setOutputSoapObject(request);
-
                     androidHttpTransport = new HttpTransportSE(CommonString.URL);
-
-                    androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL,
-                            envelope);
+                    androidHttpTransport.call(CommonString.SOAP_ACTION_UNIVERSAL, envelope);
                     result = (Object) envelope.getResponse();
-
                     if (result.toString() != null) {
-
                         xpp.setInput(new StringReader(result.toString()));
                         xpp.next();
                         eventType = xpp.getEventType();
-
                         attendanceReasonGetterSetter = XMLHandlers.AttendanceXMLHandler(xpp, eventType);
-
                         if (attendanceReasonGetterSetter.getREASON_CD().size() > 0) {
                             resultHttp = CommonString.KEY_SUCCESS;
                             String attTable = attendanceReasonGetterSetter.getTable_reason_attendance();
                             TableBean.setTable_reason_attendance(attTable);
-
                         } else {
                             return CommonString.KEY_SUCCESS;
                         }
-
                     }
 
                     return resultHttp;
                 }
 
 
-
             } catch (MalformedURLException e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -767,7 +629,7 @@ public class LoginActivity extends Activity implements
 
 
             } catch (IOException e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -778,7 +640,7 @@ public class LoginActivity extends Activity implements
                 });
 
             } catch (Exception e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -796,196 +658,200 @@ public class LoginActivity extends Activity implements
             // TODO Auto-generated method stub
             super.onPostExecute(result);
             dialog.dismiss();
-            if (result.equals(CommonString.KEY_SUCCESS)) {
-                if (preferences.getString(CommonString.KEY_VERSION, "").equals(Integer.toString(versionCode))) {
-                    String visit_date = preferences.getString(CommonString.KEY_DATE, "");
-                    if (questionGetterSetter.getAnswer_cd().size() > 0 && questionGetterSetter.getStatus().get(0).equals("N")
-                            && !preferences.getBoolean(CommonString.KEY_IS_QUIZ_DONE + visit_date, false)) {
-
-                        for (int i = 0; i < questionGetterSetter.getRight_answer().size(); i++) {
-
-                            if (questionGetterSetter.getRight_answer().get(i).equals("1")) {
-                                right_answer = questionGetterSetter.getAnswer().get(i);
-                                rigth_answer_cd = questionGetterSetter.getAnswer_cd().get(i);
-                                break;
+            try {
+                if (result.equals(CommonString.KEY_SUCCESS)) {
+                    if (preferences.getString(CommonString.KEY_VERSION, "").equals(Integer.toString(versionCode))) {
+                        String visit_date = preferences.getString(CommonString.KEY_DATE, "");
+                        if (questionGetterSetter.getAnswer_cd().size() > 0 && questionGetterSetter.getStatus().get(0).equals("N")
+                                && !preferences.getBoolean(CommonString.KEY_IS_QUIZ_DONE + visit_date, false)) {
+                            for (int i = 0; i < questionGetterSetter.getRight_answer().size(); i++) {
+                                if (questionGetterSetter.getRight_answer().get(i).equals("1")) {
+                                    right_answer = questionGetterSetter.getAnswer().get(i);
+                                    rigth_answer_cd = questionGetterSetter.getAnswer_cd().get(i);
+                                    break;
+                                }
                             }
 
-                        }
+                            final AnswerData answerData = new AnswerData();
+                            final Dialog customD = new Dialog(LoginActivity.this);
+                            customD.setTitle("Todays Question");
+                            customD.setCancelable(false);
+                            customD.setContentView(R.layout.todays_question_layout);
+                            customD.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+                            WindowManager.LayoutParams params = customD.getWindow().getAttributes();
+                            params.width = RecyclerView.LayoutParams.MATCH_PARENT;
+                            params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
+                            customD.getWindow().setAttributes((WindowManager.LayoutParams) params);
+                            ((TextView) customD.findViewById(R.id.tv_qns)).setText(questionGetterSetter.getQuestion().get(0));
+                            final Button btnsubmit = (Button) customD.findViewById(R.id.btnsubmit);
+                            final TextView txt_timer = (TextView) customD.findViewById(R.id.txt_timer);
+                            RadioGroup radioGroup = (RadioGroup) customD.findViewById(R.id.radiogrp);
+                            new CountDownTimer(30000, 1000) {
+                                public void onTick(long millisUntilFinished) {
+                                    txt_timer.setText("seconds remaining: " + millisUntilFinished / 1000);
+                                    //here you can have your logic to set text to edittext
+                                }
 
-                        final AnswerData answerData = new AnswerData();
-
-                        final Dialog dialog_quiz = new Dialog(LoginActivity.this);
-                        dialog_quiz.setTitle("Todays Question");
-                        dialog_quiz.setCancelable(false);
-                        dialog_quiz.setContentView(R.layout.todays_question_layout);
-
-                        ((TextView) dialog_quiz.findViewById(R.id.tv_qns)).setText(questionGetterSetter.getQuestion().get(0));
-                        Button btnsubmit = (Button) dialog_quiz.findViewById(R.id.btnsubmit);
-                        RadioGroup radioGroup = (RadioGroup) dialog_quiz.findViewById(R.id.radiogrp);
-
-                        for (int i = 0; i < questionGetterSetter.getAnswer_cd().size(); i++) {
-                            RadioButton rdbtn = new RadioButton(LoginActivity.this);
-                            rdbtn.setId(i);
-                            rdbtn.setText(questionGetterSetter.getAnswer().get(i));
-                            //ll.addView(rdbtn);
-                            radioGroup.addView(rdbtn);
-                        }
-
-
-                        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-                            @Override
-                            public void onCheckedChanged(RadioGroup group, int checkedId) {
-
-                                answerData.setAnswer_id(questionGetterSetter.getAnswer_cd().get(checkedId));
-                                answerData.setRight_answer(questionGetterSetter.getRight_answer().get(checkedId));
-                            }
-                        });
-                        btnsubmit.setOnClickListener(new View.OnClickListener() {
-
-                            @Override
-                            public void onClick(View v) {
-                                if (answerData.getAnswer_id() == null || answerData.getAnswer_id().equals("")) {
-                                    Snackbar.make(mEmailView, "First select an answer", Snackbar.LENGTH_SHORT).show();
-                                } else {
-                                    dialog_quiz.cancel();
-                                    dialog.cancel();
-
-                                    String ansisright = "";
-
-                                    if (answerData.getRight_answer().equals("1")) {
-                                        ansisright = "Your Answer Is Right!";
-                                    } else {
-                                        ansisright = "Your Answer is Wrong! Right Answer Is :- " + right_answer;
-                                    }
-
-                                    final Dialog ans_dialog = new Dialog(LoginActivity.this);
-                                    ans_dialog.setTitle("Answer");
-                                    ans_dialog.setCancelable(false);
-                                    //dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-                                    ans_dialog.setContentView(R.layout.show_answer_layout);
-                                    ((TextView) ans_dialog.findViewById(R.id.tv_ans)).setText(ansisright);
-                                    Button btnok = (Button) ans_dialog.findViewById(R.id.btnsubmit);
-                                    btnok.setOnClickListener(new View.OnClickListener() {
-                                        @Override
-                                        public void onClick(View v) {
-                                            answerData.setQuestion_id(questionGetterSetter.getQuestion_cd().get(0));
-                                            answerData.setUsername(user_id);
-                                            answerData.setVisit_date(lgs.getDATE());
-
-                                            if (CheckNetAvailability()) {
-                                                ans_dialog.cancel();
-
-                                                new AnswerTodayTask().execute(answerData);
-
-                                            } else {
-                                                showToast("No internet connection");
+                                public void onFinish() {
+                                    if (answerData.getAnswer_id() == null || answerData.getAnswer_id().equals("")) {
+                                        txt_timer.setText("done!");
+                                        customD.dismiss();
+                                        String ansisright = "";
+                                        ansisright = "Your Time is over";
+                                        final Dialog ans_dialog = new Dialog(LoginActivity.this);
+                                        ans_dialog.setTitle("Answer");
+                                        ans_dialog.setCancelable(false);
+                                        ans_dialog.setContentView(R.layout.show_answer_layout);
+                                        ans_dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+                                        WindowManager.LayoutParams params = ans_dialog.getWindow().getAttributes();
+                                        params.width = RecyclerView.LayoutParams.MATCH_PARENT;
+                                        params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
+                                        ans_dialog.getWindow().setAttributes((WindowManager.LayoutParams) params);
+                                        ((TextView) ans_dialog.findViewById(R.id.tv_ans)).setText(ansisright);
+                                        Button btnok = (Button) ans_dialog.findViewById(R.id.btnsubmit);
+                                        btnok.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                answerData.setQuestion_id(questionGetterSetter.getQuestion_cd().get(0));
+                                                answerData.setUsername(user_id);
+                                                answerData.setVisit_date(lgs.getDATE());
+                                                if (CheckNetAvailability()) {
+                                                    ans_dialog.cancel();
+                                                    new AnswerTodayTask().execute(answerData);
+                                                } else {
+                                                    showToast("No internet connection");
+                                                }
                                             }
-
-                                        }
-                                    });
-
-                                    ans_dialog.show();
-
-                                }
-
-                            }
-                        });
-
-                        dialog_quiz.show();
-                    } else {
-
-                        if (attendanceReasonGetterSetter.getREASON_CD().size() > 0) {
-
-                            boolean attendance_done_flag = false, entry_allow_flag = true;
-                            String reason = "";
-                            for (int i = 0; i < attendanceReasonGetterSetter.getREASON_CD().size(); i++) {
-
-                                if (attendanceReasonGetterSetter.getSTATUS().get(i).equals("1")) {
-                                    attendance_done_flag = true;
-                                    if (attendanceReasonGetterSetter.getENTRY_ALLOW().get(i).equals("0")) {
-                                        entry_allow_flag = false;
-                                        reason = attendanceReasonGetterSetter.getREASON().get(i);
-                                        break;
+                                        });
+                                        ans_dialog.show();
                                     }
                                 }
+                            }.start();
+
+                            for (int i = 0; i < questionGetterSetter.getAnswer_cd().size(); i++) {
+                                RadioButton rdbtn = new RadioButton(LoginActivity.this);
+                                rdbtn.setId(i);
+                                rdbtn.setText(questionGetterSetter.getAnswer().get(i));
+                                radioGroup.addView(rdbtn);
                             }
 
-                            if (attendance_done_flag) {
+                            radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                                @Override
+                                public void onCheckedChanged(RadioGroup group, int checkedId) {
+                                    answerData.setAnswer_id(questionGetterSetter.getAnswer_cd().get(checkedId));
+                                    answerData.setRight_answer(questionGetterSetter.getRight_answer().get(checkedId));
+                                }
+                            });
 
-                                if (entry_allow_flag) {
-
-                                    intent = new Intent(getBaseContext(), MainActivity.class);
-                                    startActivity(intent);
-
-                                    overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-
-                                    finish();
-
-                                } else {
-
-                                    showAttendanceMessage(reason);
+                            btnsubmit.setOnClickListener(new View.OnClickListener() {
+                                @Override
+                                public void onClick(View v) {
+                                    if (answerData.getAnswer_id() == null || answerData.getAnswer_id().equals("")) {
+                                        Snackbar.make(btnsubmit, "First select an answer", Snackbar.LENGTH_SHORT).show();
+                                    } else {
+                                        customD.dismiss();
+                                        String ansisright = "";
+                                        if (answerData.getRight_answer().equals("1")) {
+                                            ansisright = "Your Answer Is Right!";
+                                        } else {
+                                            ansisright = "Your Answer is Wrong! Right Answer Is :- " + right_answer;
+                                        }
+                                        final Dialog ans_dialog = new Dialog(LoginActivity.this);
+                                        ans_dialog.setTitle("Answer");
+                                        ans_dialog.setCancelable(false);
+                                        ans_dialog.setContentView(R.layout.show_answer_layout);
+                                        ans_dialog.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+                                        WindowManager.LayoutParams params = ans_dialog.getWindow().getAttributes();
+                                        params.width = RecyclerView.LayoutParams.MATCH_PARENT;
+                                        params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
+                                        ans_dialog.getWindow().setAttributes((WindowManager.LayoutParams) params);
+                                        ((TextView) ans_dialog.findViewById(R.id.tv_ans)).setText(ansisright);
+                                        Button btnok = (Button) ans_dialog.findViewById(R.id.btnsubmit);
+                                        btnok.setOnClickListener(new View.OnClickListener() {
+                                            @Override
+                                            public void onClick(View v) {
+                                                answerData.setQuestion_id(questionGetterSetter.getQuestion_cd().get(0));
+                                                answerData.setUsername(user_id);
+                                                answerData.setVisit_date(lgs.getDATE());
+                                                if (CheckNetAvailability()) {
+                                                    new AnswerTodayTask().execute(answerData);
+                                                    ans_dialog.cancel();
+                                                } else {
+                                                    showToast("No internet connection");
+                                                }
+                                            }
+                                        });
+                                        ans_dialog.show();
+                                    }
+                                }
+                            });
+                            customD.show();
+                        } else {
+                            if (attendanceReasonGetterSetter.getREASON_CD().size() > 0) {
+                                boolean attendance_done_flag = false, entry_allow_flag = true;
+                                String reason = "";
+                                for (int i = 0; i < attendanceReasonGetterSetter.getREASON_CD().size(); i++) {
+                                    if (attendanceReasonGetterSetter.getSTATUS().get(i).equals("1")) {
+                                        //////changeeeeee
+                                        attendance_done_flag = true;
+                                        if (attendanceReasonGetterSetter.getENTRY_ALLOW().get(i).equals("0")) {
+                                            entry_allow_flag = false;
+                                            reason = attendanceReasonGetterSetter.getREASON().get(i);
+                                            break;
+                                        }
+                                    }
                                 }
 
+                                if (attendance_done_flag) {
+                                    if (entry_allow_flag) {
+                                        intent = new Intent(getBaseContext(), MainActivity.class);
+                                        startActivity(intent);
+                                        overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+                                        finish();
+                                    } else {
+                                        showAttendanceMessage(reason);
+                                    }
+                                } else {
+                                    showAttendanceDialog();
+                                }
                             } else {
-
-                                showAttendanceDialog();
+                                intent = new Intent(getBaseContext(), MainActivity.class);
+                                startActivity(intent);
+                                overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+                                finish();
                             }
-
-                        } else {
-
-                            intent = new Intent(getBaseContext(),
-                                    MainActivity.class);
-                            startActivity(intent);
-
-                            overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-
-                            finish();
                         }
-
+                    } else {
+                        intent = new Intent(getBaseContext(), AutoupdateActivity.class);
+                        intent.putExtra(CommonString.KEY_PATH, preferences.getString(CommonString.KEY_PATH, ""));
+                        startActivity(intent);
+                        overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+                        finish();
                     }
 
-                } else {
-                    intent = new Intent(getBaseContext(),
-                            AutoupdateActivity.class);
-
-                    intent.putExtra(CommonString.KEY_PATH,
-                            preferences.getString(CommonString.KEY_PATH, ""));
-                    startActivity(intent);
-
-                    overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-
-                    finish();
+                } else if (result.equals(CommonString.KEY_FAILURE)) {
+                    showMessage(CommonString.METHOD_LOGIN + "Failure");
                 }
-
-            } else if (result.equals(CommonString.KEY_FAILURE)) {
-
-                showMessage(CommonString.METHOD_LOGIN + "Failure");
+                if (result.equals(CommonString.KEY_CHANGED)) {
+                    showMessage(CommonString.MESSAGE_CHANGED);
+                } else if (result.equals(CommonString.KEY_FALSE)) {
+                    showMessage(CommonString.MESSAGE_FALSE);
+                }
+                dialog.dismiss();
+            } catch (Exception e) {
+                e.printStackTrace();
             }
-            if (result.equals(CommonString.KEY_CHANGED)) {
-
-                showMessage(CommonString.MESSAGE_CHANGED);
-            } else if (result.equals(CommonString.KEY_FALSE)) {
-
-                showMessage(CommonString.MESSAGE_FALSE);
-            }
-
-            dialog.dismiss();
         }
-
     }
 
     public String getCurrentTime() {
-
         Calendar m_cal = Calendar.getInstance();
-
         SimpleDateFormat formatter = new SimpleDateFormat("HH:mm:ss");
         String intime = formatter.format(m_cal.getTime());
         return intime;
-
     }
 
     public void showMessage(String msg) {
-
         new AlertDialog.Builder(LoginActivity.this)
                 .setTitle("Login Dialog")
                 .setMessage(msg)
@@ -995,7 +861,6 @@ public class LoginActivity extends Activity implements
                         //showProgress(false);
                     }
                 })
-
                 .setIcon(android.R.drawable.ic_dialog_alert)
                 .show();
 
@@ -1003,9 +868,7 @@ public class LoginActivity extends Activity implements
     }
 
     public void showAttendanceMessage(String reason) {
-
         String msg = "Entry not allowed for - " + reason;
-
         new AlertDialog.Builder(LoginActivity.this)
                 .setTitle("Entry Dialog")
                 .setMessage(msg)
@@ -1026,24 +889,10 @@ public class LoginActivity extends Activity implements
     @Override
     protected void onResume() {
         super.onResume();
-
         checkPlayServices();
 
     }
 
-    @Override
-    protected void onStop() {
-        super.onStop();
-        if (mGoogleApiClient.isConnected()) {
-            mGoogleApiClient.disconnect();
-        }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopLocationUpdates();
-    }
 
     /**
      * Method to verify google play services on the device
@@ -1124,13 +973,12 @@ public class LoginActivity extends Activity implements
         protected String doInBackground(AnswerData... params) {
 
             try {
-
                 AnswerData answerData = params[0];
-
+                if (answerData.getAnswer_id() == null) {
+                    answerData.setAnswer_id("0");
+                }
                 String resultHttp = "";
-                versionCode = getPackageManager().getPackageInfo(
-                        getPackageName(), 0).versionCode;
-
+                versionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
                 qns_cd = answerData.getQuestion_id();
                 ans_cd = answerData.getAnswer_id();
 
@@ -1141,42 +989,28 @@ public class LoginActivity extends Activity implements
                         + "[/VISIT_DATE]"
                         + "[/TODAY_ANSWER][/DATA]";
 
-                SoapObject request = new SoapObject(CommonString.NAMESPACE,
-                        CommonString.METHOD_UPLOAD_XML);
-
+                SoapObject request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_XML);
                 request.addProperty("XMLDATA", userauth_xml);
                 request.addProperty("KEYS", "TODAYS_ANSWER");
                 request.addProperty("USERNAME", answerData.getUsername());
-
-                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(
-                        SoapEnvelope.VER11);
+                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
-
-                HttpTransportSE androidHttpTransport = new HttpTransportSE(
-                        CommonString.URL);
-
-                androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML,
-                        envelope);
-
+                HttpTransportSE androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_XML, envelope);
                 Object result = (Object) envelope.getResponse();
-
-                if (!result.toString()
-                        .equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-
+                if (!result.toString().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
                     showMessage("Fail to Submit Quiz Answer, try again");
-
                 } else {
                     String visit_date = preferences.getString(CommonString.KEY_DATE, null);
                     editor.putBoolean(CommonString.KEY_IS_QUIZ_DONE + visit_date, true);
                     editor.commit();
                     return CommonString.KEY_SUCCESS;
                 }
-
                 return "";
 
             } catch (MalformedURLException e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -1186,9 +1020,8 @@ public class LoginActivity extends Activity implements
                     }
                 });
 
-
             } catch (IOException e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -1197,9 +1030,8 @@ public class LoginActivity extends Activity implements
                         showMessage(CommonString.MESSAGE_SOCKETEXCEPTION);
                     }
                 });
-
             } catch (Exception e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -1216,22 +1048,18 @@ public class LoginActivity extends Activity implements
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-
+            dialog.dismiss();
             if (!result.equals(CommonString.KEY_SUCCESS)) {
-
                 String visit_date = preferences.getString(CommonString.KEY_DATE, null);
                 editor.putString(CommonString.KEY_QUESTION_CD + visit_date, qns_cd);
                 editor.putString(CommonString.KEY_ANSWER_CD + visit_date, ans_cd);
                 editor.commit();
-
             }
 
             if (attendanceReasonGetterSetter.getREASON_CD().size() > 0) {
-
                 boolean attendance_done_flag = false, entry_allow_flag = true;
                 String reason = "";
                 for (int i = 0; i < attendanceReasonGetterSetter.getREASON_CD().size(); i++) {
-
                     if (attendanceReasonGetterSetter.getSTATUS().get(i).equals("1")) {
                         attendance_done_flag = true;
                         if (attendanceReasonGetterSetter.getENTRY_ALLOW().get(i).equals("0")) {
@@ -1241,37 +1069,24 @@ public class LoginActivity extends Activity implements
                         }
                     }
                 }
-
                 if (attendance_done_flag) {
-
                     if (entry_allow_flag) {
-
-                        intent = new Intent(getBaseContext(),
-                                MainActivity.class);
+                        intent = new Intent(getBaseContext(), MainActivity.class);
                         startActivity(intent);
-
                         overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-
                         finish();
-
                     } else {
-
                         showAttendanceMessage(reason);
                     }
 
                 } else {
-
                     showAttendanceDialog();
                 }
 
             } else {
-
-                intent = new Intent(getBaseContext(),
-                        MainActivity.class);
+                intent = new Intent(getBaseContext(), MainActivity.class);
                 startActivity(intent);
-
                 overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-
                 finish();
             }
         }
@@ -1327,7 +1142,6 @@ public class LoginActivity extends Activity implements
     //Submit Attendance Asynctask
 
     class AttendanceTask extends AsyncTask<AttendanceReasonGetterSetter, Void, String> {
-
         private ProgressDialog dialog = null;
 
         @Override
@@ -1338,68 +1152,46 @@ public class LoginActivity extends Activity implements
             dialog.setMessage("Submitting Attendance..");
             dialog.setCancelable(false);
             dialog.show();
-
         }
 
         @Override
         protected String doInBackground(AttendanceReasonGetterSetter... params) {
 
             try {
-
                 String resultHttp = "";
-                versionCode = getPackageManager().getPackageInfo(
-                        getPackageName(), 0).versionCode;
-
-                String reason_cd = attendanceReason.getREASON_CD().get(0);
+                versionCode = getPackageManager().getPackageInfo(getPackageName(), 0).versionCode;
+                String reason_cd = selected_attendanceReason.getREASON_CD().get(0);
                 String visit_date = preferences.getString(CommonString.KEY_DATE, null);
                 String username = preferences.getString(CommonString.KEY_USERNAME, null);
                 String app_version = preferences.getString(CommonString.KEY_VERSION, null);
-
+                String remark = attendence_remark.getText().toString().replaceAll("[&+!^?*#:<>{}'%$]", "");
 
                 String userauth_xml = "[DATA]" + "[USER_DATA][USER_ID]"
                         + username + "[/USER_ID]" + "[REASON_CD]" + reason_cd
                         + "[/REASON_CD]" + "[VISIT_DATE]" + visit_date
                         + "[/VISIT_DATE]" + "[APP_VERSION]" + app_version
                         + "[/APP_VERSION]"
+                        + "[REMARK]"
+                        + remark
+                        + "[/REMARK]"
                         + "[/USER_DATA][/DATA]";
 
-
-                SoapObject request = new SoapObject(
-                        CommonString.NAMESPACE,
-                        CommonString.METHOD_UPLOAD_REASON_ATTENDANCE);
+                SoapObject request = new SoapObject(CommonString.NAMESPACE, CommonString.METHOD_UPLOAD_REASON_ATTENDANCE);
                 request.addProperty("onXML", userauth_xml);
-
-                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(
-                        SoapEnvelope.VER11);
+                SoapSerializationEnvelope envelope = new SoapSerializationEnvelope(SoapEnvelope.VER11);
                 envelope.dotNet = true;
                 envelope.setOutputSoapObject(request);
-
-                HttpTransportSE androidHttpTransport = new HttpTransportSE(
-                        CommonString.URL);
-
-                androidHttpTransport.call(
-                        CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_REASON_ATTENDANCE,
-                        envelope);
-
+                HttpTransportSE androidHttpTransport = new HttpTransportSE(CommonString.URL);
+                androidHttpTransport.call(CommonString.SOAP_ACTION + CommonString.METHOD_UPLOAD_REASON_ATTENDANCE, envelope);
                 Object result = (Object) envelope.getResponse();
-
-                XmlPullParserFactory factory = XmlPullParserFactory
-                        .newInstance();
+                XmlPullParserFactory factory = XmlPullParserFactory.newInstance();
                 factory.setNamespaceAware(true);
                 XmlPullParser xpp = factory.newPullParser();
-
                 xpp.setInput(new StringReader(result.toString()));
                 xpp.next();
                 eventType = xpp.getEventType();
-                FailureGetterSetter failureGetterSetter = XMLHandlers
-                        .failureXMLHandler(xpp, eventType);
-
-                //------------------
-
-
-                if (!failureGetterSetter.getStatus()
-                        .equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
-                    //showMessage("Fail to Submit Attendance, try again");
+                FailureGetterSetter failureGetterSetter = XMLHandlers.failureXMLHandler(xpp, eventType);
+                if (!failureGetterSetter.getStatus().equalsIgnoreCase(CommonString.KEY_SUCCESS)) {
                     return CommonString.KEY_FAILURE;
                 } else {
                     return CommonString.KEY_SUCCESS;
@@ -1408,7 +1200,7 @@ public class LoginActivity extends Activity implements
                 //return "";
 
             } catch (MalformedURLException e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -1420,7 +1212,7 @@ public class LoginActivity extends Activity implements
 
 
             } catch (IOException e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -1431,7 +1223,7 @@ public class LoginActivity extends Activity implements
                 });
 
             } catch (Exception e) {
-
+                dialog.dismiss();
                 runOnUiThread(new Runnable() {
 
                     @Override
@@ -1448,26 +1240,18 @@ public class LoginActivity extends Activity implements
         @Override
         protected void onPostExecute(String result) {
             super.onPostExecute(result);
-
+            dialog.dismiss();
             if (result.equals(CommonString.KEY_SUCCESS)) {
-
-                if (attendanceReason.getENTRY_ALLOW().get(0).equals("0")) {
-                    showAttendanceMessage(attendanceReason.getREASON().get(0));
+                if (selected_attendanceReason.getENTRY_ALLOW().get(0).equals("0")) {
+                    showAttendanceMessage(selected_attendanceReason.getREASON().get(0));
                 } else {
-                    intent = new Intent(getBaseContext(),
-                            MainActivity.class);
-
+                    intent = new Intent(getBaseContext(), MainActivity.class);
                     startActivity(intent);
-
                     overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-
                     finish();
                 }
-
             } else if (result.equals(CommonString.KEY_FAILURE)) {
-
                 showMessage("Fail to Submit Attendance, try again");
-                //finish();
             } else {
                 showMessage("Problem occurred while uploading attendance");
             }
@@ -1506,70 +1290,161 @@ public class LoginActivity extends Activity implements
         @Override
         public View getView(int position, View view, ViewGroup viewGroup) {
             view = inflter.inflate(R.layout.custom_spinner_item, null);
-            //ImageView icon = (ImageView) view.findViewById(R.id.imageView);
             TextView names = (TextView) view.findViewById(R.id.tv_ans);
-            if (position == 0) {
-                names.setText("Select Reason");
-            } else {
-                names.setText(reason.getREASON().get(position - 1));
-            }
-
+            names.setText(reason.getREASON().get(position).trim());
             return view;
         }
     }
 
     public void showAttendanceDialog() {
-
         CustomSpinnerAdapter customAdapter;
-
         final Dialog dialog_attendance = new Dialog(LoginActivity.this);
         dialog_attendance.setTitle("Todays Attendance");
         dialog_attendance.setCancelable(false);
-        //dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+        dialog_attendance.requestWindowFeature(Window.FEATURE_NO_TITLE);
         dialog_attendance.setContentView(R.layout.attendance_dialog_layout);
+        dialog_attendance.getWindow().setType(WindowManager.LayoutParams.TYPE_SYSTEM_ALERT);
+        WindowManager.LayoutParams params = dialog_attendance.getWindow().getAttributes();
+        params.width = RecyclerView.LayoutParams.MATCH_PARENT;
+        params.height = RecyclerView.LayoutParams.WRAP_CONTENT;
+        dialog_attendance.getWindow().setAttributes((android.view.WindowManager.LayoutParams) params);
         Spinner spinner = (Spinner) dialog_attendance.findViewById(R.id.spin_reason);
         Button btnsubmit = (Button) dialog_attendance.findViewById(R.id.btnsubmit);
-        customAdapter = new CustomSpinnerAdapter(getApplicationContext(), attendanceReasonGetterSetter);
+        //change by jeevan
+        final LinearLayout rl_reason = (LinearLayout) dialog_attendance.findViewById(R.id.rl_reason);
+        attendence_remark = (EditText) dialog_attendance.findViewById(R.id.attendence_remark);
+        ///for to date and from date
+        final LinearLayout layout_todate_fromdate = (LinearLayout) dialog_attendance.findViewById(R.id.layout_todate_fromdate);
+        text_todate = (TextView) dialog_attendance.findViewById(R.id.text_todate);
+        text_fromdate = (TextView) dialog_attendance.findViewById(R.id.text_fromdate);
+        final ImageView img_todate = (ImageView) dialog_attendance.findViewById(R.id.img_todate);
+        final ImageView img_fromdate = (ImageView) dialog_attendance.findViewById(R.id.img_fromdate);
+
+        img_todate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                calendar = Calendar.getInstance();
+                mYear = calendar.get(Calendar.YEAR);
+                mMonth = calendar.get(Calendar.MONTH);
+                mDay = calendar.get(Calendar.DAY_OF_MONTH);
+                // Launch Date Picker Dialog
+                dpd = new DatePickerDialog(LoginActivity.this, new DatePickerDialog.OnDateSetListener() {
+                    @Override
+                    public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+                        String dob = (monthOfYear + 1) + "/" + dayOfMonth + "/" + year;
+                        text_todate.setText(dob);
+                    }
+
+                }, mYear, mMonth, mDay);
+                // TODO Hide Future Date Here
+                //  dpd.getDatePicker().setMaxDate(System.currentTimeMillis());
+                // TODO Hide Past Date Here
+                dpd.getDatePicker().setMinDate(System.currentTimeMillis() - 1000);
+                dpd.show();
+            }
+        });
+
+        img_fromdate.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                calendar = Calendar.getInstance();
+                mYear = calendar.get(Calendar.YEAR);
+                mMonth = calendar.get(Calendar.MONTH);
+                mDay = calendar.get(Calendar.DAY_OF_MONTH);
+                // Launch Date Picker Dialog
+                dpd = new DatePickerDialog(LoginActivity.this, new DatePickerDialog.OnDateSetListener() {
+                    @Override
+                    public void onDateSet(DatePicker view, int year, int monthOfYear, int dayOfMonth) {
+                        String dob = (monthOfYear + 1) + "/" + dayOfMonth + "/" + year;
+                        text_fromdate.setText(dob);
+                    }
+
+                }, mYear, mMonth, mDay);
+                // TODO Hide Future Date Here
+                //  dpd.getDatePicker().setMaxDate(System.currentTimeMillis());
+                // TODO Hide Past Date Here
+                dpd.getDatePicker().setMinDate(System.currentTimeMillis() - 1000);
+                dpd.show();
+            }
+        });
+        attendanceReasonGetterSetter.getREASON_CD().add(0, "-1");
+        attendanceReasonGetterSetter.getREASON().add(0, "-Select Reason-");
+        attendanceReasonGetterSetter.getSTATUS().add(0, "-1");
+        attendanceReasonGetterSetter.getENTRY_ALLOW().add(0, "-1");
+
+        customAdapter = new CustomSpinnerAdapter(LoginActivity.this, attendanceReasonGetterSetter);
         spinner.setAdapter(customAdapter);
         spinner.setOnItemSelectedListener(new AdapterView.OnItemSelectedListener() {
             @Override
             public void onItemSelected(AdapterView<?> parent, View view, int position, long id) {
-                if (position != 0) {
-                    attendanceReason = new AttendanceReasonGetterSetter();
-                    attendanceReason.setREASON(attendanceReasonGetterSetter.getREASON().get(position - 1));
-                    attendanceReason.setREASON_CD(attendanceReasonGetterSetter.getREASON_CD().get(position - 1));
-                    attendanceReason.setENTRY_ALLOW(attendanceReasonGetterSetter.getENTRY_ALLOW().get(position - 1));
-                    attendanceReason.setSTATUS(attendanceReasonGetterSetter.getSTATUS().get(position - 1));
-                } else {
-                    if (attendanceReason.getREASON_CD().size() > 0)
-                        attendanceReason = new AttendanceReasonGetterSetter();
+                switch (parent.getId()) {
+                    case R.id.spin_reason:
+                        if (position != 0) {
+                            selected_attendanceReason = new AttendanceReasonGetterSetter();
+                            selected_attendanceReason.setREASON(attendanceReasonGetterSetter.getREASON().get(position));
+                            selected_attendanceReason.setREASON_CD(attendanceReasonGetterSetter.getREASON_CD().get(position));
+                            selected_attendanceReason.setENTRY_ALLOW(attendanceReasonGetterSetter.getENTRY_ALLOW().get(position));
+                            selected_attendanceReason.setSTATUS(attendanceReasonGetterSetter.getSTATUS().get(position));
+                            if (attendanceReasonGetterSetter.getREASON().get(position).equalsIgnoreCase("Others")) {
+                                rl_reason.setVisibility(View.VISIBLE);
+                                layout_todate_fromdate.setVisibility(View.GONE);
+                                text_fromdate.setText("");
+                                text_fromdate.setText("");
+                            } else if (attendanceReasonGetterSetter.getREASON().get(position).equalsIgnoreCase("Leave")) {
+                                rl_reason.setVisibility(View.GONE);
+                                layout_todate_fromdate.setVisibility(View.VISIBLE);
+                                attendence_remark.setText("");
+                            } else {
+                                rl_reason.setVisibility(View.GONE);
+                                layout_todate_fromdate.setVisibility(View.GONE);
+                                text_fromdate.setText("");
+                                text_fromdate.setText("");
+                                attendence_remark.setText("");
+                            }
+                        } else {
+                            if (selected_attendanceReason.getREASON_CD().size() > 0)
+                                selected_attendanceReason = new AttendanceReasonGetterSetter();
+                            rl_reason.setVisibility(View.GONE);
+                            layout_todate_fromdate.setVisibility(View.GONE);
+                            text_fromdate.setText("");
+                            text_fromdate.setText("");
+                            attendence_remark.setText("");
+                        }
+                        break;
                 }
+
             }
 
             @Override
             public void onNothingSelected(AdapterView<?> parent) {
-
             }
         });
 
         btnsubmit.setOnClickListener(new View.OnClickListener() {
-
             @Override
             public void onClick(View v) {
-
-                if (attendanceReason.getREASON_CD().size() > 0) {
-
-                    dialog_attendance.cancel();
-                    new AttendanceTask().execute(attendanceReason);
-
+                boolean status = true;
+                if (selected_attendanceReason.getREASON_CD().size() > 0 && !selected_attendanceReason.getREASON().get(0).equalsIgnoreCase("-Select Reason-")) {
+                    if (selected_attendanceReason.getREASON().get(0).equalsIgnoreCase("Others")) {
+                        if (attendence_remark.getText().toString().equals("")) {
+                            status = false;
+                            Snackbar.make(mEmailView, "Please Fill Remark", Snackbar.LENGTH_SHORT).show();
+                        } else if (selected_attendanceReason.getREASON().get(0).equalsIgnoreCase("Leave") && text_fromdate.equals("") && text_todate.equals("")) {
+                            status = false;
+                            attendence_remark.setText("");
+                            Snackbar.make(mEmailView, "Please select To Date and From Date", Snackbar.LENGTH_SHORT).show();
+                        }
+                    }
+                    if (status) {
+                        dialog_attendance.cancel();
+                        new AttendanceTask().execute(selected_attendanceReason);
+                    }
                 } else {
                     Snackbar.make(mEmailView, "First select a reason", Snackbar.LENGTH_SHORT).show();
                 }
             }
         });
-
         dialog_attendance.show();
-
     }
 
     private boolean checkgpsEnableDevice() {
@@ -1593,8 +1468,7 @@ public class LoginActivity extends Activity implements
 
 
     private boolean hasGPSDevice(Context context) {
-        final LocationManager mgr = (LocationManager) context
-                .getSystemService(Context.LOCATION_SERVICE);
+        final LocationManager mgr = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         if (mgr == null)
             return false;
         final List<String> providers = mgr.getAllProviders();

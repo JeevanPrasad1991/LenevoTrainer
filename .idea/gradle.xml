@@ -9,6 +9,7 @@
           <set>
             <option value="$PROJECT_DIR$" />
             <option value="$PROJECT_DIR$/LenovoTrainer" />
+            <option value="$PROJECT_DIR$/annca" />
           </set>
         </option>
         <option name="resolveModulePerSourceSet" value="false" />

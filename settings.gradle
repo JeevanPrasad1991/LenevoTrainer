@@ -1,1 +1,1 @@
-include ':LenovoTrainer'
+include ':LenovoTrainer', ':annca'

@@ -3,6 +3,7 @@ package cpm.com.lenovotraining.dailyentry;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
+import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -11,6 +12,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -29,7 +31,6 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -52,10 +53,18 @@ import com.google.android.gms.location.LocationSettingsStatusCodes;
 
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.ksoap2.SoapEnvelope;
+import org.ksoap2.serialization.SoapObject;
+import org.ksoap2.serialization.SoapSerializationEnvelope;
+import org.ksoap2.transport.HttpTransportSE;
 
+import java.io.IOException;
+import java.net.MalformedURLException;
+import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.Date;
 import java.util.List;
 
 import cpm.com.lenovotraining.R;
@@ -69,44 +78,29 @@ import cpm.com.lenovotraining.xmlgettersetter.JCPGetterSetter;
 
 public class StoreListActivity extends AppCompatActivity
         implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener, LocationListener {
-
     Database db;
     ArrayList<JCPGetterSetter> storedataList = new ArrayList<>();
     ArrayList<CoverageBean> coverageList = new ArrayList<>();
-
     MyItemRecyclerViewAdapter myItemRecyclerViewAdapter;
-
     RecyclerView rec_store_data;
-
     LinearLayout linearLayout;
-
     private SharedPreferences preferences = null;
-    private String user_name, user_type, visit_date, store_cd;
-
+    private String user_name, user_type, visit_date;
     private SharedPreferences.Editor editor = null;
-
     FloatingActionButton fab;
-
     Dialog dialog;
-
-    String coverage_status = "";
-
     // Location updates intervals in sec
     private static int UPDATE_INTERVAL = 500; // 5 sec
     private static int FATEST_INTERVAL = 100; // 1 sec
     private static int DISPLACEMENT = 5; // 10 meters
-
     Location mLastLocation;
     private final static int PLAY_SERVICES_RESOLUTION_REQUEST = 1000;
-
     // LogCat tag
     private static final String TAG = PostTrainigActivity.class.getSimpleName();
-
     GoogleApiClient mGoogleApiClient;
-    Double lat, lon;
+    Double lat = 0.0, lon = 0.0;
     private LocationRequest mLocationRequest;
     private LocationManager locmanager = null;
-
     String training_mode_cd, manned, trainning_mode = "";
     //private Data data;
     private GoogleApiClient googleApiClient;
@@ -126,13 +120,12 @@ public class StoreListActivity extends AppCompatActivity
         user_name = preferences.getString(CommonString.KEY_USERNAME, null);
         user_type = preferences.getString(CommonString.KEY_USER_TYPE, null);
         visit_date = preferences.getString(CommonString.KEY_DATE, null);
-        // checkgpsEnableDevice();
+        setTitle("Store List - " + visit_date);
         fab = (FloatingActionButton) findViewById(R.id.fab);
         fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 // Download data
-
                 Handler h = new Handler() {
                     @Override
                     public void handleMessage(Message msg) {
@@ -147,7 +140,6 @@ public class StoreListActivity extends AppCompatActivity
                                         .setCancelable(false)
                                         .setPositiveButton("OK", new DialogInterface.OnClickListener() {
                                             public void onClick(DialogInterface dialog, int id) {
-
                                                 Intent startUpload = new Intent(StoreListActivity.this, CheckoutNUpload.class);
                                                 startActivity(startUpload);
                                                 finish();
@@ -159,6 +151,12 @@ public class StoreListActivity extends AppCompatActivity
                                 alert.show();
 
                             } else {
+                                try {
+                                    db.open();
+                                    db.deletePreviousUploadedData(visit_date);
+                                } catch (Exception e) {
+                                    e.printStackTrace();
+                                }
 
                                 Intent startDownload = new Intent(getApplicationContext(), CompleteDownloadActivity.class);
                                 startActivity(startDownload);
@@ -170,17 +168,13 @@ public class StoreListActivity extends AppCompatActivity
                 isNetworkAvailable(h, 5000);
             }
         });
-
         locmanager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
-
         // First we need to check availability of play services
         if (checkPlayServices()) {
-
             // Building the GoogleApi client
             buildGoogleApiClient();
             createLocationRequest();
         }
-
         if (Build.VERSION.SDK_INT >= 23 &&
                 ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED &&
                 ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
@@ -191,8 +185,23 @@ public class StoreListActivity extends AppCompatActivity
     @Override
     protected void onResume() {
         super.onResume();
+        DateFormat dateFormat = new SimpleDateFormat("MM/dd/yyyy");
+        Date date = new Date();
+        if (!dateFormat.format(date).equalsIgnoreCase(visit_date)) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(StoreListActivity.this).setTitle("Alert Dialog");
+            builder.setMessage("Your Device date does not match login Date. You will be logged out now");
+            builder.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+                @Override
+                public void onClick(DialogInterface dialog, int which) {
+                    startActivity(new Intent(StoreListActivity.this, LoginActivity.class));
+                    overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+                    StoreListActivity.this.finish();
+                    dialog.dismiss();
+                }
+            });
+            builder.show();
+        }
         checkPlayServices();
-        store_cd = preferences.getString(CommonString.KEY_STORE_CD, "");
         db = new Database(getApplicationContext());
         db.open();
         storedataList = db.getStoreData(visit_date);
@@ -205,9 +214,7 @@ public class StoreListActivity extends AppCompatActivity
             linearLayout.setVisibility(View.GONE);
             fab.setVisibility(View.GONE);
         }
-
     }
-
 
     public class MyItemRecyclerViewAdapter extends RecyclerView.Adapter<MyItemRecyclerViewAdapter.ViewHolder> {
         private final List<JCPGetterSetter> mValues;
@@ -231,165 +238,159 @@ public class StoreListActivity extends AppCompatActivity
             final String upload_status = storedataList.get(position).getUPLOAD_STATUS().get(0);
             final String store_cds = storedataList.get(position).getSTORE_CD().get(0);
             final String checkout_status = storedataList.get(position).getCHECKOUT_STATUS().get(0);
-            String coverage_status = "";
 
-            for (int k = 0; k < coverageList.size(); k++) {
-                if (coverageList.get(k).getStoreId().equals(store_cds)) {
-                    coverage_status = coverageList.get(k).getStatus();
-                    break;
-                }
-
-            }
+            ArrayList<CoverageBean> coverage_data = db.getCoverageSpecificData(storedataList.get(position).getSTORE_CD().get(0),
+                    storedataList.get(position).getVISIT_DATE().get(0));
 
             if (upload_status.equals(CommonString.KEY_U)) {
                 holder.img.setBackgroundResource(R.drawable.tick_u);
                 holder.img.setVisibility(View.VISIBLE);
                 holder.btn_checkout.setVisibility(View.GONE);
-            } else if (!coverage_status.equals("") && coverage_status.equals(CommonString.KEY_VALID)) {
-                holder.btn_checkout.setVisibility(View.VISIBLE);
-                holder.img.setVisibility(View.INVISIBLE);
-            } else if ((checkout_status.equals(CommonString.KEY_C))) {
+            } else if (checkout_status.equals(CommonString.KEY_C)) {
                 holder.img.setBackgroundResource(R.drawable.tick_c);
                 holder.img.setVisibility(View.VISIBLE);
                 holder.btn_checkout.setVisibility(View.GONE);
 
-            } else if (!coverage_status.equals("") && coverage_status.equals(CommonString.STORE_STATUS_LEAVE)) {
-                holder.img.setBackgroundResource(R.drawable.leave_tick);
-                holder.img.setVisibility(View.VISIBLE);
-                holder.btn_checkout.setVisibility(View.GONE);
-            } else {
-                holder.btn_checkout.setVisibility(View.GONE);
-                if (!store_cd.equals("") && store_cd.equals(store_cds)) {
+            } else if (coverage_data.size() > 0) {
+                if (coverage_data.get(0).getStatus().equals(CommonString.STORE_STATUS_LEAVE)) {
+                    holder.img.setBackgroundResource(R.drawable.leave_tick);
+                    holder.img.setVisibility(View.VISIBLE);
+                    holder.btn_checkout.setVisibility(View.GONE);
+                } else if (coverage_data.get(0).getStatus().equals(CommonString.KEY_VALID)) {
+                    holder.btn_checkout.setVisibility(View.VISIBLE);
+                    holder.img.setVisibility(View.INVISIBLE);
+                } else if (coverage_data.get(0).getStatus().equals(CommonString.KEY_INVALID)) {
+                    holder.btn_checkout.setVisibility(View.GONE);
                     holder.img.setVisibility(View.VISIBLE);
                     holder.img.setBackgroundResource(R.drawable.checkin_ico);
                 } else {
                     holder.img.setVisibility(View.INVISIBLE);
                 }
+
+            } else {
+                holder.img.setVisibility(View.INVISIBLE);
             }
 
             holder.parentLayout.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
-                    final String store_cdss = storedataList.get(position).getSTORE_CD().get(0);
-                    final String upload_status = storedataList.get(position).getUPLOAD_STATUS().get(0);
-                    final String checkoutstatus = storedataList.get(position).getCHECKOUT_STATUS().get(0);
-                    final double storelat = Double.valueOf(storedataList.get(position).getLAT().get(0));
-                    final double storelongt = Double.valueOf(storedataList.get(position).getLONG().get(0));
-                    final String storegeoT = storedataList.get(position).getGEOTAG().get(0);
+                    try {
+                        ArrayList<CoverageBean> coverage_data = db.getCoverageData(visit_date);
+                        final String store_cdss = storedataList.get(position).getSTORE_CD().get(0);
+                        final double storelat = Double.valueOf(storedataList.get(position).getLAT().get(0));
+                        final double storelongt = Double.valueOf(storedataList.get(position).getLONG().get(0));
+                        final String storegeoT = storedataList.get(position).getGEOTAG().get(0);
+                        training_mode_cd = storedataList.get(position).getTMODE_CD().get(0);
+                        manned = storedataList.get(position).getMANAGED().get(0);
+                        trainning_mode = storedataList.get(position).getTRAINING_MODE().get(0);
 
-                    training_mode_cd = storedataList.get(position).getTMODE_CD().get(0);
-                    manned = storedataList.get(position).getMANAGED().get(0);
-                    trainning_mode = storedataList.get(position).getTRAINING_MODE().get(0);
-                    String coverage_status = "";
+                        if (storedataList.get(position).getUPLOAD_STATUS().get(0).equalsIgnoreCase(CommonString.KEY_U)) {
+                            Snackbar.make(rec_store_data, CommonString.MESSAGE_DATA_ALREADY_UPLOADED, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
+                        } else if (storedataList.get(position).getCHECKOUT_STATUS().get(0).equals(CommonString.KEY_C)) {
+                            Snackbar.make(rec_store_data, CommonString.MESSAGE_STORE_ALREADY_CHECKED_OUT, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
+                        } else {
+                            boolean enteryflag = true;
+                            if (coverage_data.size() > 0) {
+                                for (int i2 = 0; i2 < coverage_data.size(); i2++) {
+                                    if (coverage_data.get(i2).getStoreId().equals(store_cdss)) {
+                                        if (coverage_data.get(i2).getStatus().equals(CommonString.STORE_STATUS_LEAVE)) {
+                                            Snackbar.make(rec_store_data, CommonString.MESSAGE_SOTORE_ALREADY_CLOSED, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
+                                            enteryflag = false;
+                                            break;
+                                        }
+                                    }
 
-                    for (int k = 0; k < coverageList.size(); k++) {
-                        if (coverageList.get(k).getStoreId().equals(store_cds)) {
-                            coverage_status = coverageList.get(k).getStatus();
-                            break;
-                        }
-                    }
-
-
-                    if (upload_status.equalsIgnoreCase(CommonString.KEY_U)) {
-                        Snackbar.make(rec_store_data, CommonString.MESSAGE_DATA_ALREADY_UPLOADED, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
-
-                    } else if (!coverage_status.equals("") && coverage_status.equals(CommonString.STORE_STATUS_LEAVE)) {
-                        Snackbar.make(rec_store_data, CommonString.MESSAGE_SOTORE_ALREADY_CLOSED, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
-
-                    } else if (!checkoutstatus.equals("") && checkoutstatus.equals(CommonString.KEY_C)) {
-                        Snackbar.make(rec_store_data, CommonString.MESSAGE_STORE_ALREADY_CHECKED_OUT, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
-
-                    } else if (!store_cd.equals("") && !store_cdss.equals(store_cd)) {
-                        Snackbar.make(rec_store_data, CommonString.MESSAGE_FIRST_CHECKOUT, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
-
-                    } else {
-                        dialog = new Dialog(StoreListActivity.this);
-                        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-                        dialog.setContentView(R.layout.dialog_layout);
-                        RadioGroup radioGroup = (RadioGroup) dialog.findViewById(R.id.radiogrpvisit);
-                        radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
-                            @Override
-                            public void onCheckedChanged(RadioGroup group, int checkedId) {
-                                // find which radio button is selected
-                                if (checkedId == R.id.yes) {
-                                    dialog.cancel();
-                                    editor = preferences.edit();
-                                    editor.putString(CommonString.KEY_STORE_CD, store_cdss);
-                                    editor.putString(CommonString.KEY_TRAINING_MODE, trainning_mode);
-                                    editor.putString(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-                                    editor.putString(CommonString.KEY_MANAGED, manned);
-                                    editor.commit();
-                                    getMid(store_cdss);
-                                    if (checkgpsEnableDevice()) {
-                                        if (training_mode_cd.equals("1")) {
-                                            if (storelat != 0 && storelongt != 0 && lat != 0.0 && lon != 0.0) {
-                                                int distance = distFrom(storelat, storelongt, lat, lon);
-                                                if (distance <= 100) {
+                                }
+                                if (enteryflag) {
+                                    for (int i = 0; i < coverage_data.size(); i++) {
+                                        if (coverage_data.get(i).getStatus().equalsIgnoreCase(CommonString.KEY_VALID) ||
+                                                coverage_data.get(i).getStatus().equalsIgnoreCase(CommonString.KEY_INVALID)) {
+                                            if (!coverage_data.get(i).getStoreId().equals(store_cdss)) {
+                                                Snackbar.make(rec_store_data, CommonString.MESSAGE_FIRST_CHECKOUT, Snackbar.LENGTH_SHORT).setAction("Action", null).show();
+                                                enteryflag = false;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            if (enteryflag) {
+                                dialog = new Dialog(StoreListActivity.this);
+                                dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+                                dialog.setContentView(R.layout.dialog_layout);
+                                RadioGroup radioGroup = (RadioGroup) dialog.findViewById(R.id.radiogrpvisit);
+                                radioGroup.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+                                    @Override
+                                    public void onCheckedChanged(RadioGroup group, int checkedId) {
+                                        // find which radio button is selected
+                                        if (checkedId == R.id.yes) {
+                                            dialog.cancel();
+                                            editor = preferences.edit();
+                                            editor.putString(CommonString.KEY_STORE_CD, store_cdss);
+                                            editor.putString(CommonString.KEY_TRAINING_MODE, trainning_mode);
+                                            editor.putString(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
+                                            editor.putString(CommonString.KEY_MANAGED, manned);
+                                            editor.commit();
+                                            getMid(store_cdss);
+                                            if (checkgpsEnableDevice()) {
+                                                if (training_mode_cd.equals("1")) {
+                                                    if (storelat != 0 && storelongt != 0 && lat != 0.0 && lon != 0.0) {
+                                                        int distance = distFrom(storelat, storelongt, lat, lon);
+                                                        if (distance <= 100) {
+                                                            Intent in = new Intent(getApplicationContext(), RouteTrainingActivity.class);
+                                                            startActivity(in);
+                                                            overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+                                                        } else {
+                                                            Snackbar.make(rec_store_data, "You should be less than 100 meters from the store to enter data for the store.", Snackbar.LENGTH_LONG).show();
+                                                        }
+                                                    } else {
+                                                        Intent in = new Intent(getApplicationContext(), RouteTrainingActivity.class);
+                                                        startActivity(in);
+                                                        overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+                                                    }
+                                                } else {
                                                     Intent in = new Intent(getApplicationContext(), RouteTrainingActivity.class);
-                                                   /* in.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-                                                    in.putExtra(CommonString.KEY_MANAGED, manned);*/
                                                     startActivity(in);
                                                     overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
-                                                } else {
-                                                    Snackbar.make(rec_store_data, "Store distance is not less 100 meter ,So can't able to come in store", Snackbar.LENGTH_LONG).show();
                                                 }
-                                            } else {
-                                                Intent in = new Intent(getApplicationContext(), RouteTrainingActivity.class);
-                                               // in.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-                                               // in.putExtra(CommonString.KEY_MANAGED, manned);
-                                                startActivity(in);
-                                                overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
                                             }
-                                        } else {
-                                            Intent in = new Intent(getApplicationContext(), RouteTrainingActivity.class);
-                                           // in.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-                                           // in.putExtra(CommonString.KEY_MANAGED, manned);
-                                            startActivity(in);
-                                            overridePendingTransition(R.anim.activity_in, R.anim.activity_out);
+
+                                        } else if (checkedId == R.id.no) {
+                                            dialog.cancel();
+                                            AlertDialog.Builder builder = new AlertDialog.Builder(StoreListActivity.this);
+                                            builder.setMessage(CommonString.DATA_DELETE_ALERT_MESSAGE)
+                                                    .setCancelable(false)
+                                                    .setPositiveButton("Yes",
+                                                            new DialogInterface.OnClickListener() {
+                                                                public void onClick(DialogInterface dialog, int id) {
+                                                                    UpdateData(store_cdss);
+                                                                    Intent in = new Intent(getApplicationContext(), NonWorkingReasonActivity.class);
+                                                                    in.putExtra(CommonString.KEY_STORE_CD, store_cdss);
+                                                                    in.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
+                                                                    in.putExtra(CommonString.KEY_MANAGED, manned);
+                                                                    startActivity(in);
+
+                                                                }
+                                                            })
+                                                    .setNegativeButton("No",
+                                                            new DialogInterface.OnClickListener() {
+                                                                public void onClick(DialogInterface dialog, int id) {
+                                                                    dialog.cancel();
+                                                                }
+                                                            });
+                                            AlertDialog alert = builder.create();
+                                            alert.show();
                                         }
 
                                     }
+                                });
 
-                                } else if (checkedId == R.id.no) {
-                                    dialog.cancel();
-                                    AlertDialog.Builder builder = new AlertDialog.Builder(StoreListActivity.this);
-                                    builder.setMessage(CommonString.DATA_DELETE_ALERT_MESSAGE)
-                                            .setCancelable(false)
-                                            .setPositiveButton("Yes",
-                                                    new DialogInterface.OnClickListener() {
-                                                        public void onClick(DialogInterface dialog, int id) {
-                                                            UpdateData(store_cdss);
-                                                            SharedPreferences.Editor editor = preferences.edit();
-                                                            editor.putString(CommonString.KEY_STORE_CD, "");
-                                                            editor.commit();
-                                                            Intent in = new Intent(getApplicationContext(), NonWorkingReasonActivity.class);
-                                                            in.putExtra(CommonString.KEY_STORE_CD, store_cdss);
-                                                            in.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
-                                                            in.putExtra(CommonString.KEY_MANAGED, manned);
-                                                            startActivity(in);
-
-                                                        }
-                                                    })
-                                            .setNegativeButton("No",
-                                                    new DialogInterface.OnClickListener() {
-                                                        public void onClick(DialogInterface dialog,
-                                                                            int id) {
-
-
-                                                            dialog.cancel();
-                                                        }
-                                                    });
-                                    AlertDialog alert = builder.create();
-
-                                    alert.show();
-                                }
-
+                                dialog.show();
                             }
-                        });
-
-                        dialog.show();
+                        }
+                    } catch (Exception e) {
+                        e.printStackTrace();
                     }
-
                 }
             });
 
@@ -397,26 +398,21 @@ public class StoreListActivity extends AppCompatActivity
                 @Override
                 public void onClick(View v) {
                     AlertDialog.Builder builder = new AlertDialog.Builder(
-                            StoreListActivity.this);
-                    builder.setMessage("Are you sure you want to Checkout")
+                            StoreListActivity.this).setTitle(getString(R.string.parinaam));
+                    builder.setMessage("Are you sure you want to Checkout ?")
                             .setCancelable(false)
                             .setPositiveButton("OK",
                                     new DialogInterface.OnClickListener() {
                                         public void onClick(
                                                 DialogInterface dialog, int id) {
-
                                             Handler h = new Handler() {
                                                 @Override
                                                 public void handleMessage(Message msg) {
-
                                                     if (msg.what != 1) { // code if not connected
                                                         Snackbar.make(rec_store_data, CommonString.NO_INTERNET_CONNECTION, Snackbar.LENGTH_SHORT).show();
                                                     } else { // code if connected
-
-                                                        editor = preferences.edit();
-                                                        editor.putString(CommonString.KEY_STORE_CD, storedataList.get(position).getSTORE_CD().get(0));
-                                                        editor.commit();
                                                         Intent i = new Intent(StoreListActivity.this, CheckOutStoreActivity.class);
+                                                        i.putExtra(CommonString.KEY_STORE_CD, storedataList.get(position).getSTORE_CD().get(0));
                                                         startActivity(i);
                                                     }
                                                 }
@@ -439,9 +435,19 @@ public class StoreListActivity extends AppCompatActivity
             });
 
 
-            if (mValues.get(position).getTRAINING_MODE().get(0).equalsIgnoreCase("Remote")) {
+            if (mValues.get(position).
+
+                    getTRAINING_MODE().
+
+                    get(0).
+
+                    equalsIgnoreCase("Remote"))
+
+            {
                 holder.img_tick.setVisibility(View.VISIBLE);
-            } else {
+            } else
+
+            {
                 holder.img_tick.setVisibility(View.GONE);
             }
 
@@ -533,32 +539,22 @@ public class StoreListActivity extends AppCompatActivity
             finish();
             overridePendingTransition(R.anim.activity_back_in, R.anim.activity_back_out);
         }
-
         return super.onOptionsItemSelected(item);
     }
 
     public void UpdateData(String storeCd) {
-
         db.open();
         db.deleteSpecificStoreData(storeCd);
-
-
-        db.updateStoreStatusOnCheckout(storeCd, storedataList.get(0).getVISIT_DATE().get(0),
-                "N");
-
-
+        db.updateStoreStatusOnCheckout(storeCd, storedataList.get(0).getVISIT_DATE().get(0), "N");
     }
 
-    public long checkMid() {
+    public long checkMid(String store_cd) {
         return db.CheckMid(visit_date, store_cd);
     }
 
     public long getMid(String store_cd) {
-
         long mid = 0;
-
-        mid = checkMid();
-
+        mid = checkMid(store_cd);
         if (mid == 0) {
             CoverageBean cdata = new CoverageBean();
             cdata.setStoreId(store_cd);
@@ -575,12 +571,11 @@ public class StoreListActivity extends AppCompatActivity
             if (lon == null || lon.equals("")) {
                 lon = 0.0;
             }
-            cdata.setLongitude(String.valueOf(lat));
-            cdata.setStatus("N");
+            cdata.setLongitude(String.valueOf(lon));
+            cdata.setStatus(CommonString.KEY_INVALID);
             cdata.setTraining_mode_cd(training_mode_cd);
             cdata.setManaged(manned);
             mid = db.InsertCoverageData(cdata);
-
         }
         return mid;
     }
@@ -595,27 +590,22 @@ public class StoreListActivity extends AppCompatActivity
 
     @Override
     public void onConnected(Bundle bundle) {
-
-        mLastLocation = LocationServices.FusedLocationApi
-                .getLastLocation(mGoogleApiClient);
-
+        startLocationUpdates();
+        mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
                 || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
             if (mLastLocation != null) {
                 lat = mLastLocation.getLatitude();
                 lon = mLastLocation.getLongitude();
             }
-
         }
-
-        startLocationUpdates();
-
     }
 
     @Override
     public void onConnectionSuspended(int i) {
         mGoogleApiClient.connect();
     }
+
     @Override
     public void onConnectionFailed(ConnectionResult connectionResult) {
         Log.i(TAG, "Connection failed: ConnectionResult.getErrorCode() = "
@@ -628,6 +618,7 @@ public class StoreListActivity extends AppCompatActivity
             mGoogleApiClient.connect();
         }
     }
+
     @Override
     public void onLocationChanged(Location location) {
 
@@ -640,12 +631,6 @@ public class StoreListActivity extends AppCompatActivity
         if (mGoogleApiClient.isConnected()) {
             mGoogleApiClient.disconnect();
         }
-    }
-
-    @Override
-    protected void onPause() {
-        super.onPause();
-        stopLocationUpdates();
     }
 
     /**
@@ -674,20 +659,15 @@ public class StoreListActivity extends AppCompatActivity
      */
     protected void startLocationUpdates() {
 
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
-                || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_FINE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(this, android.Manifest.permission.ACCESS_COARSE_LOCATION) ==
+                PackageManager.PERMISSION_GRANTED) {
             LocationServices.FusedLocationApi.requestLocationUpdates(mGoogleApiClient, mLocationRequest, this);
 
         }
     }
 
-    /**
-     * Stopping location updates
-     */
-    protected void stopLocationUpdates() {
-        LocationServices.FusedLocationApi.removeLocationUpdates(mGoogleApiClient, this);
-    }
 
     /**
      * Creating google api client object
@@ -706,6 +686,7 @@ public class StoreListActivity extends AppCompatActivity
         mLocationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
         mLocationRequest.setSmallestDisplacement(DISPLACEMENT);
     }
+
     private boolean checkgpsEnableDevice() {
         boolean flag = true;
         googleApiClient = null;
@@ -731,6 +712,7 @@ public class StoreListActivity extends AppCompatActivity
             return false;
         return providers.contains(LocationManager.GPS_PROVIDER);
     }
+
     private void enableLoc() {
         if (googleApiClient == null) {
             googleApiClient = new GoogleApiClient.Builder(this)
@@ -738,6 +720,11 @@ public class StoreListActivity extends AppCompatActivity
                     .addConnectionCallbacks(new GoogleApiClient.ConnectionCallbacks() {
                         @Override
                         public void onConnected(Bundle bundle) {
+                            mLastLocation = LocationServices.FusedLocationApi.getLastLocation(mGoogleApiClient);
+                            if (mLastLocation != null) {
+                                lat = mLastLocation.getLatitude();
+                                lon = mLastLocation.getLongitude();
+                            }
                         }
 
                         @Override
@@ -758,11 +745,8 @@ public class StoreListActivity extends AppCompatActivity
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
             locationRequest.setInterval(30 * 1000);
             locationRequest.setFastestInterval(5 * 1000);
-            LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder()
-                    .addLocationRequest(locationRequest);
-
+            LocationSettingsRequest.Builder builder = new LocationSettingsRequest.Builder().addLocationRequest(locationRequest);
             builder.setAlwaysShow(true);
-
             PendingResult<LocationSettingsResult> result =
                     LocationServices.SettingsApi.checkLocationSettings(googleApiClient, builder.build());
             result.setResultCallback(new ResultCallback<LocationSettingsResult>() {
@@ -773,7 +757,6 @@ public class StoreListActivity extends AppCompatActivity
                         case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
                             try {
                                 // Show the dialog by calling startResolutionForResult(),
-                                // and check the result in onActivityResult().
                                 status.startResolutionForResult(StoreListActivity.this, REQUEST_LOCATION);
                             } catch (IntentSender.SendIntentException e) {
                                 // Ignore the error.
@@ -793,7 +776,6 @@ public class StoreListActivity extends AppCompatActivity
                 switch (resultCode) {
                     case Activity.RESULT_CANCELED: {
                         googleApiClient = null;
-                        // finish();
                     }
 
                     default: {

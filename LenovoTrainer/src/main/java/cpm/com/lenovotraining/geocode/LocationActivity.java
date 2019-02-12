@@ -170,7 +170,6 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                         data.close();
                         if (isNetworkOnline()) {
                             Intent intent2 = new Intent(LocationActivity.this, UploadGeotaggingActivity.class);
-                            //intent2.putExtra(CommonString.KEY_TRAINING_MODE_CD, training_mode_cd);
                             startActivity(intent2);
                             LocationActivity.this.finish();
                         }
@@ -243,7 +242,6 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
     protected void onResume() {
         // TODO Auto-generated method stub
         super.onResume();
-
         if (ImageUploadActivity.CheckGeotagImage(_pathforcheck)) {
             capture_1.setBackgroundResource(R.drawable.camera_icon_done);
         }
@@ -294,12 +292,14 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
                 break;
         }
     }
+
     protected void onPhotoTaken() {
         Log.i("MakeMachine", "onPhotoTaken");
         _taken = true;
         BitmapFactory.Options options = new BitmapFactory.Options();
         options.inSampleSize = 8;
     }
+
     @Override
     protected void onRestoreInstanceState(Bundle savedInstanceState) {
         Log.i("MakeMachine", "onRestoreInstanceState()");
@@ -505,7 +505,6 @@ public class LocationActivity extends AppCompatActivity implements OnMapReadyCal
 
     public void onBackPressed() {
         // TODO Auto-generated method stub
-
         LocationActivity.this.finish();
     }
 

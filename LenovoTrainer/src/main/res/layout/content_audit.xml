@@ -13,6 +13,8 @@
     tools:showIn="@layout/activity_audit"
     android:background="@color/grey_background">
 
+
+
     <android.support.v7.widget.CardView
         xmlns:card_view="http://schemas.android.com/apk/res-auto"
         android:layout_width="match_parent"
@@ -20,14 +22,24 @@
         card_view:cardBackgroundColor="@color/white"
         card_view:cardCornerRadius="5dp" >
 
+        <ExpandableListView
+            android:id="@+id/lvExp"
+            android:layout_width="fill_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/linearLayout1"
+            android:layout_below="@+id/appbar"
+            android:cacheColorHint="#00000000"
+            android:divider="@null"
+            android:dividerHeight="0dp"
+            android:scrollingCache="false" />
+
+
         <android.support.v7.widget.RecyclerView
             android:id="@+id/rec_audit_data"
+            android:visibility="gone"
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            >
-
+            android:layout_height="wrap_content">
         </android.support.v7.widget.RecyclerView>
-
     </android.support.v7.widget.CardView>
 
 

@@ -8,12 +8,34 @@ import java.io.Serializable;
 /**
  * Created by yadavendras on 09-09-2016.
  */
-public class AddNewEmployeeGetterSetter implements Parcelable{
+public class AddNewEmployeeGetterSetter implements Parcelable {
 
-    String name, email, phone, key_id;
+    String name;
+    String email;
+    String phone;
+    String key_id;
+
+    public String getManneged() {
+        return manneged;
+    }
+
+    public void setManneged(String manneged) {
+        this.manneged = manneged;
+    }
+
+    public String getImage() {
+        return image;
+    }
+
+    public void setImage(String image) {
+        this.image = image;
+    }
+
+    String manneged = "";
+    String image = "";
     boolean isIsd = false;
 
-    public AddNewEmployeeGetterSetter(){
+    public AddNewEmployeeGetterSetter() {
 
     }
 
